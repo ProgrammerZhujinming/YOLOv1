@@ -1,5 +1,4 @@
 # YOLO_V1_GPU  
-！！！请暂停使用，因本项目初期为避免精度误差而将坐标误差采用回归到原图像尺度上的方式进行计算Loss，最终未回归至0-1区间，导致了坐标误差与其他误差的差距过大，正在紧急修复中~~  
 Tensorboard功能有待完善、目前迭代正常  
 环境要求：  
 1.PyTorch >= 1.1.0  
@@ -16,4 +15,4 @@ Tensorboard功能有待完善、目前迭代正常
 1.增加各种loss的tensorboard曲线图监控  
 2.增加特征图输出功能--该功能严重影响训练，所以在代码中做了注释处理，如有需要请自行开启：# feature_map_visualize(batch_train[0], writer)，取消注释即可  
 3.使用特征图功能可能会遇到TypeError: clamp_(): argument ‘min’ must be Number, not Tensor，此时需要修改torchvison.utils源码，将norm_ip(t, t.min(), t.max())改为norm_ip(t, float(t.min()), float(t.max()))  
-4.loss的坐标损失已经归一化到0-1区间  
+4.因本项目初期为避免精度误差而将坐标误差采用回归到原图像尺度上的方式进行计算Loss，最终未回归至0-1区间，导致了坐标误差与其他误差的差距过大。当前版本loss的坐标损失已经归一化到0-1区间  
