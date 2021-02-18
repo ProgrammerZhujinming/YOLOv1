@@ -7,10 +7,10 @@ from torch.utils.data import DataLoader
 dataLoader = DataLoader(dataSet,batch_size=32,shuffle=True,num_workers=4)
 
 from YOLO_v1_Model import YOLO_V1
-Yolo = YOLO_V1().cuda(device=1)
+Yolo = YOLO_V1().cuda()
 
 from YOLO_V1_LossFunction import  Yolov1_Loss
-loss_function = Yolov1_Loss().cuda(device=1)
+loss_function = Yolov1_Loss().cuda()
 
 import torch.optim as optim
 optimizer = optim.SGD(Yolo.parameters(),lr=5e-4,momentum=0.9)
@@ -39,9 +39,9 @@ for epoch in range(2000*dataSet.Classes):
     epoch_iou = 0
     epoch_object_num = 0
     for batch_index, batch_train in enumerate(dataLoader):
-        train_data = torch.Tensor(batch_train[0]).float().cuda(device=1)
+        train_data = torch.Tensor(batch_train[0]).float().cuda()
         train_data.requires_grad = True
-        label_data = torch.Tensor(batch_train[1]).float().cuda(device=1)
+        label_data = torch.Tensor(batch_train[1]).float().cuda()
         loss = loss_function(bounding_boxes=Yolo(train_data),ground_truth=label_data)
         loss_coord += loss[0].item()
         loss_confidence += loss[1].item()
