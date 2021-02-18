@@ -2,7 +2,7 @@
 Tensorboard功能有待完善、目前迭代正常  
 环境要求：  
 1.PyTorch >= 1.1.0  
-2.tensorboardX包
+2.tensorboardX包  
 3.cuda >= 10.1  
 项目说明：  
 1.tensorboard功能需要PyTorch版本在1.1.0及以上，在项目目录下执行指令tensorboard --logdir=log即可启动
