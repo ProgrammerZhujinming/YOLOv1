@@ -17,6 +17,7 @@ optimizer = optim.SGD(Yolo.parameters(),lr=5e-4,momentum=0.9)
 
 from tensorboardX import SummaryWriter
 import torchvision.utils as vutils
+import torch.nn as nn
 writer = SummaryWriter('log')
 
 def feature_map_visualize(img_data, writer):
