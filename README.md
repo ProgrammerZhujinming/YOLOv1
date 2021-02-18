@@ -11,3 +11,9 @@ Tensorboard功能有待完善、目前迭代正常
 3.本项目默认使用GPU运行，如需使用CPU，请将cuda()全部去除  
 4.频繁读取图片、垃圾回收的GC算法运行不够及时，可能会导致程序因为内存不足退出，可以手动管理，将img_data转为tensor后，将原来在内存中的数据del掉，再使用gc.collect()回收，内存够用可以无视  
 5.本项目为个人复现论文研究使用，禁止用在其他任何场合，谢谢配合  
+
+更新日志 2-18  
+1.增加各种loss的tensorboard曲线图监控  
+2.增加特征图输出功能--该功能严重影响训练，所以在代码中做了注释处理，如有需要请自行开启：# feature_map_visualize(batch_train[0], writer)，取消注释即可  
+3.使用特征图功能可能会遇到TypeError: clamp_(): argument ‘min’ must be Number, not Tensor，此时需要修改torchvison.utils源码，将norm_ip(t, t.min(), t.max())改为norm_ip(t, float(t.min()), float(t.max()))  
+4.loss的坐标损失已经归一化到0-1区间  
