@@ -4,7 +4,7 @@ import torch
 
 class Yolov1_Loss(nn.Module):
 
-    def __init__(self, S=7, B=2, Classes=2, l_coord=5, l_noobj=0.5):
+    def __init__(self, S=7, B=2, Classes=2, l_coord=1, l_noobj=1):
         # 有物体的box损失权重设为l_coord,没有物体的box损失权重设置为l_noobj
         super(Yolov1_Loss, self).__init__()
         self.S = S
@@ -45,7 +45,7 @@ class Yolov1_Loss(nn.Module):
         interSection = (CrossRX - CrossLX + 1) * (CrossDY - CrossUY + 1)
         return interSection / (predict_Area + ground_Area - interSection)
 
-    def forward(self, bounding_boxes, ground_truth):  # 输入是 S * S * ( 2 * B + Classes)
+    def forward(self, bounding_boxes, ground_truth, grid_size=64, img_size=448):  # 输入是 S * S * ( 2 * B + Classes)
         # 定义三个计算损失的变量 正样本定位损失 样本置信度损失 样本类别损失
         loss_coord = torch.Tensor([0]).requires_grad_()
         loss_confidence = torch.Tensor([0]).requires_grad_()
@@ -57,6 +57,7 @@ class Yolov1_Loss(nn.Module):
             for i in range(self.S):  # 先行 - Y
                 for j in range(self.S):  # 后列 - X
                     # 取bounding box中置信度更大的框
+                    noobject_num += 1
                     if bounding_boxes[batch][i][j][4] < bounding_boxes[batch][i][j][9]:
                         predict_box = bounding_boxes[batch][i][j][5:]
                         # 另一个框是负样本
@@ -66,7 +67,7 @@ class Yolov1_Loss(nn.Module):
                         predict_box = torch.cat((predict_box, bounding_boxes[batch][i][j][10:]), dim=0)
                         # 另一个框是负样本
                         loss_confidence = loss_confidence + self.l_noobj * math.pow(bounding_boxes[batch][i][j][9], 2)
-                    # 为拥有最大置信度的bounding_box找到最大iou的predict_box
+                    # 为拥有最大置信度的bounding_box找到最大iou的groundtruth_box
                     max_iou = 0
                     max_iou_index = -1
                     for k in range(len(ground_truth[batch][i][j])):
@@ -80,13 +81,14 @@ class Yolov1_Loss(nn.Module):
                             max_iou_index = k
                     # bounding box为负样
                     if max_iou_index == -1:
+                        noobject_num += 1
                         loss_confidence = loss_confidence + self.l_noobj * math.pow(predict_box[4], 2)
                     # 正样本的损失计算
                     else:
                         object_num = object_num + 1
                         iou_sum = iou_sum + max_iou
                         ground_box = ground_truth[batch][i][j][max_iou_index]
-                        loss_coord = loss_coord + self.l_coord * (math.pow(ground_box[0] - predict_box[0], 2) + math.pow(ground_box[1] - predict_box[1], 2) + math.pow(math.sqrt(ground_box[2]) - math.sqrt(predict_box[2]), 2) + math.pow(math.sqrt(ground_box[3]) - math.sqrt(predict_box[3]), 2))
+                        loss_coord = loss_coord + self.l_coord * (math.pow((ground_box[0] - predict_box[0]) / grid_size, 2) + math.pow((ground_box[1] - predict_box[1]) / grid_size, 2) + math.pow(math.sqrt(ground_box[2] / img_size) - math.sqrt(predict_box[2] / img_size), 2) + math.pow(math.sqrt(ground_box[3] / img_size) - math.sqrt(predict_box[3] / img_size), 2))
                         loss_confidence = loss_confidence + math.pow(ground_box[4] - predict_box[4], 2)
                         ground_class = ground_box[10:]
                         predict_class = bounding_boxes[batch][i][j][self.B * 5:]
@@ -94,63 +96,5 @@ class Yolov1_Loss(nn.Module):
                             loss_classes = loss_classes + self.l_noobj * math.pow(ground_class[i] - predict_class[i], 2)
 
         print("坐标误差:{} 置信度误差:{} 类别损失:{}".format(loss_coord.item(), loss_confidence.item(), loss_classes.item()))
-        print("iou:{} confidence:{}".format("nan" if object_num == 0 else (iou_sum / object_num).item(),
-                                            (loss_confidence / (object_num + noobject_num)).item()))
-        return loss_coord + loss_confidence + loss_classes
-
-
-'''
-    def forward(self, bounding_boxes, ground_truth): # 输入是 S * S * ( 2 * B + Classes)
-        loss_coord = torch.Tensor([0]).requires_grad_()
-        loss_confidence = torch.Tensor([0]).requires_grad_()
-        loss_classes = torch.Tensor([0]).requires_grad_()
-        object_num = 0
-        iou_sum = 0
-        noobject_num = 0
-        for batch in range(len(bounding_boxes)):
-            for i in range(self.S): # 先行 - Y
-                for j in range(self.S):# 后列 - X
-                    exist = {}
-                    for t in range(self.B): # 标记还没有分配的box序号
-                        exist[t] = 1
-                    # 为每一个ground_box找到最大iou的predict_box
-                    for k in range(len(ground_truth[batch][i][j])):
-                        max_iou = 0
-                        max_iou_index = -1
-                        if ground_truth[batch][i][j][k][9] == 0: # 面积为0的grount_truth 为了形状相同强行拼接的无用的0-box
-                            break
-                        # 遍历每一个当前grid cell内部的预测框
-                        for t in range(self.B):
-                            if exist[t] == 1: # 如果当前框还没有分配
-                                predict = bounding_boxes[batch][i][j][5 * t : 5 * t + 4]
-                                ground = ground_truth[batch][i][j][k]
-                                iou = self.iou(predict,ground,j*64, i*64)
-                                if max_iou < iou:
-                                    max_iou = iou
-                                    max_iou_index = t
-                        # 找不到和ground_box有交集的预测框
-                        if max_iou_index == -1:
-                            continue
-                        #正样本的损失计算
-                        object_num = object_num + 1
-                        iou_sum = iou_sum + max_iou
-                        ground_box = ground_truth[batch][i][j][k]
-                        predict_box = bounding_boxes[batch][i][j][max_iou_index*5 : max_iou_index*5 + 5]
-                        #print(predict_box)
-                        loss_coord = loss_coord + self.l_coord * (math.pow(ground_box[0] - predict_box[0],2) + math.pow(ground_box[1] - predict_box[1],2) + math.pow(math.sqrt(ground_box[2])-math.sqrt(predict_box[2]),2) + math.pow(math.sqrt(ground_box[3])-math.sqrt(predict_box[3]),2))
-                        loss_confidence = loss_confidence + math.pow(ground_box[4]-predict_box[4],2)
-                        ground_class = ground_box[10:]
-                        predict_class = bounding_boxes[batch][i][j][self.B * 5:]
-                        for i in range(self.Classes):
-                            loss_classes = loss_classes + self.l_noobj * math.pow(ground_class[i] - predict_class[i],2)
-                        exist[max_iou_index] = 0
-
-                    #所有没有分配到ground_box的预测框都是负样本 负样本只有置信度损失
-                    for key in exist:
-                        noobject_num = noobject_num + 1
-                        predict_box = bounding_boxes[batch][i][j][key*5:key*5+5]
-                        loss_confidence = loss_confidence + self.l_noobj * math.pow(predict_box[4],2)
-        print("坐标误差:{} 置信度误差:{} 类别损失:{}".format(loss_coord.item(),loss_confidence.item(),loss_classes.item()))
-        print("iou:{} confidence:{}".format("nan" if object_num == 0 else (iou_sum/object_num).item(),(loss_confidence/(object_num + noobject_num)).item()))
-        return loss_coord + loss_confidence + loss_classes
-'''
+        print("iou:{} ".format("nan" if object_num == 0 else (iou_sum / object_num).item()))
+        return loss_coord, loss_confidence ,loss_classes, iou_sum, object_num
