@@ -7,7 +7,7 @@ import torchvision.transforms as transforms
 
 class YoloV1DataSet(Dataset):
 
-    def __init__(self, imgs_dir="./Data/Train/JPEGImages", annotations_dir="./Data/Train/Annotations", img_size=448, S=7, B=2, ClassesFile="./Data/class.data"): # 图片路径、注解文件路径、图片尺寸、每个grid cell预测的box数量、类别文件
+    def __init__(self, imgs_dir="./VOC2007/Train/JPEGImages", annotations_dir="./VOC2007/Train/Annotations", img_size=448, S=7, B=2, ClassesFile="./VOC2007/Train/class.data"): # 图片路径、注解文件路径、图片尺寸、每个grid cell预测的box数量、类别文件
         img_names = os.listdir(imgs_dir)
         img_names.sort()
         self.transfrom = transforms.Compose([
@@ -98,20 +98,6 @@ class YoloV1DataSet(Dataset):
             ground_truth_index = ground_truth_index + 1
         self.ground_truth = torch.Tensor(self.ground_truth).float()
 
-    # 直接预读取图片
-    '''
-    def getImgData(self):
-        self.img_data = torch.Tensor([]).float()
-        for img_index in range(len(self.img_path)):
-            print("index1:{}  index2:{}".format(img_index,len(self.img_path)))
-            img_data = cv2.imread(self.img_path[img_index])
-            img_data = cv2.resize(img_data, (448, 448), interpolation=cv2.INTER_AREA)
-            img_data = self.transfrom(img_data).resize(448, 448, 3)
-            self.img_data = torch.cat((self.img_data, img_data),dim=0)
-        self.img_data = torch.Tensor(self.img_data).float()
-        print(self.img_data)
-    '''
-
     def __getitem__(self, item):
         img_data = cv2.imread(self.img_path[item])
         img_data = cv2.resize(img_data, (448, 448), interpolation=cv2.INTER_AREA)
@@ -121,6 +107,3 @@ class YoloV1DataSet(Dataset):
 
     def __len__(self):
         return len(self.img_path)
-
-
-#YoloV1DataSet(imgs_dir="./Data/Train/JPEGImages",annotations_dir="./Data/Train/Annotations",img_size=448,S=7,B=2,ClassesFile="./Data/class.data")
