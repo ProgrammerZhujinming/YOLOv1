@@ -1,7 +1,6 @@
+#---------------step1:Dataset-------------------
 import torch
 from YOLO_V1_DataSet import YoloV1DataSet
-
-#---------------step1:Dataset-------------------
 dataSet = YoloV1DataSet(imgs_dir="./VOC2007/Train/JPEGImages",annotations_dir="./VOC2007/Train/Annotations",ClassesFile="./VOC2007/Train/class.data")
 from torch.utils.data import DataLoader
 dataLoader = DataLoader(dataSet,batch_size=32,shuffle=True,num_workers=4)
@@ -51,30 +50,32 @@ while epoch <= 2000*dataSet.Classes:
     scheduler.step()
 
     for batch_index, batch_train in enumerate(dataLoader):
-        train_data = torch.Tensor(batch_train[0]).float().cuda(device=1)
+        optimizer.zero_grad()
+        train_data = batch_train[0].float().cuda(device=1)
         train_data.requires_grad = True
-        label_data = torch.Tensor(batch_train[1]).float().cuda(device=1)
+        label_data = batch_train[1].float().cuda(device=1)
         loss = loss_function(bounding_boxes=Yolo(train_data),ground_truth=label_data)
-        loss_coord += loss[0].item()
-        loss_confidence += loss[1].item()
-        loss_classes += loss[2].item()
+        loss_coord += loss[0]
+        loss_confidence += loss[1]
+        loss_classes += loss[2]
         batch_loss = loss[0] + loss[1] + loss[2]
         epoch_iou += loss[3]
         epoch_object_num += loss[4]
-        optimizer.zero_grad()
         batch_loss.backward()
         optimizer.step()
         loss_sum += batch_loss.item()
-
+        #writer.add_graph(loss_function, (Yolo(train_data),label_data))
+        for name, param in Yolo.named_parameters():
+            print("name:{} param:{}".format(name, param.grad))
         print("batch_index : {} ; batch_loss : {}".format(batch_index,batch_loss.item()))
     epoch += 1
     if (epoch < 1000 and epoch % 100 == 0) or epoch % 1000 == 0:
         torch.save(Yolo.state_dict(), './YOLO_V1_' + str(epoch) + '.pth')
     print("epoch : {} ; loss : {}".format(epoch,{loss_sum}))
-    #feature_map_visualize(batch_train[0], writer)
     for name, layer in Yolo.named_parameters():
         writer.add_histogram(name + '_grad', layer.grad.cpu().data.numpy(), epoch)
         writer.add_histogram(name + '_data', layer.cpu().data.numpy(), epoch)
+    #feature_map_visualize(batch_train[0], writer)
     writer.add_scalar('Train/Loss_sum', loss_sum, epoch + 1)
     writer.add_scalar('Train/Loss_coord', loss_coord, epoch + 1)
     writer.add_scalar('Train/Loss_confidenct', loss_confidence, epoch + 1)
