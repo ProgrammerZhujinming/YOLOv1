@@ -11,7 +11,7 @@ class YoloV1DataSet(Dataset):
         img_names = os.listdir(imgs_dir)
         img_names.sort()
         self.transfrom = transforms.Compose([
-            transforms.ToTensor(),
+            transforms.ToTensor(), # height * width * channel -> channel * height * width
             transforms.Normalize(mean=(0.5,0.5,0.5),std=(0.5,0.5,0.5))
         ])
         self.img_path = []
@@ -33,6 +33,7 @@ class YoloV1DataSet(Dataset):
                 line = line.replace('\n','')
                 self.ClassNameToInt[line] = classIndex #根据类别名制作索引
                 classIndex += 1
+        print(self.ClassNameToInt)
         self.Classes = classIndex # 一共的类别个数
         self.getGroundTruth()
         #self.getImgData()
@@ -79,7 +80,7 @@ class YoloV1DataSet(Dataset):
                 ClassIndex = self.ClassNameToInt[class_name]
                 ClassList = [0 for i in range(self.Classes)]
                 ClassList[ClassIndex] = 1
-                ground_box = list([centerX,centerY,(xmax-xmin)/self.img_size,(ymax-ymin)/self.img_size,1,xmin,ymin,xmax,ymax,(xmax-xmin)*(ymax-ymin)])
+                ground_box = list([centerX / self.grid_cell_size - indexJ,centerY / self.grid_cell_size - indexI,(xmax-xmin)/self.img_size,(ymax-ymin)/self.img_size,1,xmin,ymin,xmax,ymax,(xmax-xmin)*(ymax-ymin)])
                 #增加上类别
                 ground_box.extend(ClassList)
                 ground_truth[indexI][indexJ].append(ground_box)
@@ -92,13 +93,14 @@ class YoloV1DataSet(Dataset):
                         self.ground_truth[ground_truth_index][i][j].append(ground_truth[i][j][k])
                     box_num = len(self.ground_truth[ground_truth_index][i][j])
                     while box_num < 2:
-                        self.ground_truth[ground_truth_index][i][j].append([0 for i in range(self.B * 5 + self.Classes)])
+                        self.ground_truth[ground_truth_index][i][j].append([0 for i in range(10 + self.Classes)])
                         box_num = box_num + 1
 
             ground_truth_index = ground_truth_index + 1
         self.ground_truth = torch.Tensor(self.ground_truth).float()
 
     def __getitem__(self, item):
+        # height * width * channel
         img_data = cv2.imread(self.img_path[item])
         img_data = cv2.resize(img_data, (448, 448), interpolation=cv2.INTER_AREA)
         img_data = self.transfrom(img_data)
