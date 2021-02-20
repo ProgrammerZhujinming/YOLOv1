@@ -18,7 +18,7 @@ loss_function = Yolov1_Loss().cuda(device=1)
 #---------------step4:Optimizer-------------------
 import torch.optim as optim
 optimizer = optim.SGD(Yolo.parameters(),lr=5e-3,momentum=0.9,weight_decay=0.0005)
-scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,milestones=[200,400,600,20000,30000],gamma=[2.5,2,2,.1,.1])
+scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,milestones=[200,400,600,20000,30000],gamma=0.9)
 
 #--------------step5:Tensorboard Feature Map------------
 from tensorboardX import SummaryWriter
