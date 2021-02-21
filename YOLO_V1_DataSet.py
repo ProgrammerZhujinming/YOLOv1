@@ -32,21 +32,18 @@ class YoloV1DataSet(Dataset):
             for line in f:
                 line = line.replace('\n','')
                 self.ClassNameToInt[line] = classIndex #根据类别名制作索引
-                classIndex += 1
+                classIndex = classIndex + 1
         print(self.ClassNameToInt)
         self.Classes = classIndex # 一共的类别个数
         self.getGroundTruth()
-        #self.getImgData()
 
     # PyTorch 无法将长短不一的list合并为一个Tensor
     def getGroundTruth(self):
         self.ground_truth = [[[list() for i in range(self.S)] for j in range(self.S)] for k in
                              range(len(self.img_path))]  # 根据标注文件生成ground_truth
         ground_truth_index = 0
-        #self.ground_truth = [list() for k in range(len(self.img_path))] # 根据标注文件生成文件个数个ground_truth
         for annotation_file in self.annotation_path:
             ground_truth = [[list() for i in range(self.S)] for j in range(self.S)]
-            #ground_truth = np.zeros(shape=(self.S, self.S, 5 * self.B + self.Classes))
             # 解析xml文件--标注文件
             tree = ET.parse(annotation_file)
             annotation_xml = tree.getroot()
@@ -88,13 +85,11 @@ class YoloV1DataSet(Dataset):
             #同一个grid cell内的多个groudn_truth，选取面积最大的两个
             for i in range(self.S):
                 for j in range(self.S):
-                    ground_truth[i][j].sort(key = lambda box: box[9])
-                    for k in range(min(2,len(ground_truth[i][j]))):
-                        self.ground_truth[ground_truth_index][i][j].append(ground_truth[i][j][k])
-                    box_num = len(self.ground_truth[ground_truth_index][i][j])
-                    while box_num < 2:
+                    if len(ground_truth[i][j]) == 0:
                         self.ground_truth[ground_truth_index][i][j].append([0 for i in range(10 + self.Classes)])
-                        box_num = box_num + 1
+                    else:
+                        ground_truth[i][j].sort(key = lambda box: box[9], reverse=True)
+                        self.ground_truth[ground_truth_index][i][j].append(ground_truth[i][j][0])
 
             ground_truth_index = ground_truth_index + 1
         self.ground_truth = torch.Tensor(self.ground_truth).float()
