@@ -67,8 +67,9 @@ class YOLO_V1(nn.Module):
         )
 
         self.Conv_Res = nn.Sequential(
-            nn.Conv2d(1024,256,1,1,0),
-            nn.ReLU(inplace=True),
+            Convention(1024,1024,1,1,0), # 1 * 1
+            Convention(1024,256,1,1,0),
+            Convention(256, 256, 1, 1, 0),  # 1 * 1
             nn.Conv2d(256,self.B * 5 + self.Classes_Num,1,1,0),
             nn.Sigmoid()
         )
