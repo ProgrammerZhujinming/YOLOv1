@@ -62,13 +62,13 @@ class Yolov1_Loss(nn.Module):
                         predict_box = bounding_boxes[batch][i][j][5:]
                         # 另一个框是负样本
                         loss = loss + self.l_noobj * torch.pow(bounding_boxes[batch][i][j][4], 2)
-                        loss_confidence += self.l_noobj * math.pow(bounding_boxes[batch][i][j][4].item(), 2)
+                        loss_confidence += self.l_noobj * math.pow(bounding_boxes[batch][i][j][4], 2)
                     else:
                         predict_box = bounding_boxes[batch][i][j][0:5]
                         predict_box = torch.cat((predict_box, bounding_boxes[batch][i][j][10:]), dim=0)
                         # 另一个框是负样本
                         loss = loss + self.l_noobj * torch.pow(bounding_boxes[batch][i][j][9], 2)
-                        loss_confidence += self.l_noobj * math.pow(bounding_boxes[batch][i][j][9].item(), 2)
+                        loss_confidence += self.l_noobj * math.pow(bounding_boxes[batch][i][j][9], 2)
                     # 为拥有最大置信度的bounding_box找到最大iou的groundtruth_box
                     if ground_truth[batch][i][j][0][9] == 0:  # 面积为0的grount_truth 为了形状相同强行拼接的无用的0-box negative-sample
                         loss = loss + self.l_noobj * torch.pow(predict_box[4], 2)
