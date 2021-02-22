@@ -6,9 +6,9 @@ from torch.utils.data import DataLoader
 dataLoader = DataLoader(dataSet,batch_size=32,shuffle=True,num_workers=4)
 
 #---------------step2:Model-------------------
-from YOLO_v1_Model import YOLO_V1
+from YOLO_V1_Model import YOLO_V1
 Yolo = YOLO_V1().cuda(device=1)
-train_file = "YOLO_V1_1000.pth"
+train_file = "YOLO_V1_100.pth"
 Yolo.load_state_dict(torch.load(train_file))
 
 #---------------step3:LossFunction-------------------
@@ -17,8 +17,8 @@ loss_function = Yolov1_Loss().cuda(device=1)
 
 #---------------step4:Optimizer-------------------
 import torch.optim as optim
-optimizer = optim.Adam(Yolo.parameters(),lr=1e-4,momentum=0.9,weight_decay=0.0005)
-#scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,milestones=[200,400,600,800,1000,2000,5000,10000],gamma=0.9)
+optimizer = optim.SGD(Yolo.parameters(),lr=3e-4,momentum=0.9,weight_decay=0.0005)
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer,step_size=100,gamma=0.95)
 
 #--------------step5:Tensorboard Feature Map------------
 from tensorboardX import SummaryWriter
@@ -30,8 +30,7 @@ def feature_map_visualize(img_data, writer):
     img_data = img_data.unsqueeze(0)
     img_grid = vutils.make_grid(img_data, normalize=True, scale_each=True)
     for i,m in enumerate(Yolo.modules()):
-        if isinstance(m, nn.Conv2d) or isinstance(m, nn.BatchNorm2d) or \
-                isinstance(m, nn.ReLU) or isinstance(m, nn.MaxPool2d) or isinstance(m, nn.AdaptiveAvgPool2d):
+        if isinstance(m, nn.Conv2d) or isinstance(m, nn.BatchNorm2d) or isinstance(m, nn.ReLU) or isinstance(m, nn.MaxPool2d) or isinstance(m, nn.AdaptiveAvgPool2d):
             img_data = m(img_data)
             img_data = img_data.permute(1, 0, 2, 3)
             img_grid = vutils.make_grid(img_data, normalize=True, scale_each=True)
@@ -41,7 +40,7 @@ def feature_map_visualize(img_data, writer):
 
 from tensorboardX import SummaryWriter
 import torchvision.utils as vutils
-writer = SummaryWriter('log')
+writer = SummaryWriter('')
 
 epoch = int(train_file.split('_')[2].split('.')[0]) + 1
 while epoch <= 2000*dataSet.Classes:
@@ -52,7 +51,7 @@ while epoch <= 2000*dataSet.Classes:
     loss_classes = 0
     epoch_iou = 0
     epoch_object_num = 0
-    #scheduler.step()
+    scheduler.step()
 
     for batch_index, batch_train in enumerate(dataLoader):
         optimizer.zero_grad()
@@ -70,6 +69,7 @@ while epoch <= 2000*dataSet.Classes:
         optimizer.step()
         batch_loss = batch_loss.item()
         loss_sum = loss_sum + batch_loss
+        #feature_map_visualize(train_data[0][0], writer)
         print("batch_index : {} ; batch_loss : {}".format(batch_index, batch_loss))
     epoch = epoch + 1
     if (epoch < 1000 and epoch % 100 == 0) or epoch % 1000 == 0:
@@ -78,7 +78,7 @@ while epoch <= 2000*dataSet.Classes:
     for name, layer in Yolo.named_parameters():
         writer.add_histogram(name + '_grad', layer.grad.cpu().data.numpy(), epoch)
         writer.add_histogram(name + '_data', layer.cpu().data.numpy(), epoch)
-    feature_map_visualize(batch_train[0], writer)
+
     writer.add_scalar('Train/Loss_sum', loss_sum, epoch)
     writer.add_scalar('Train/Loss_coord', loss_coord, epoch)
     writer.add_scalar('Train/Loss_confidenct', loss_confidence, epoch)
