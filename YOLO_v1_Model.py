@@ -1,4 +1,5 @@
 import torch.nn as nn
+import torch
 
 class Convention(nn.Module):
     def __init__(self,in_channels,out_channels,conv_size,conv_stride,padding):
@@ -6,7 +7,7 @@ class Convention(nn.Module):
         self.Conv = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, conv_size, conv_stride, padding),
             nn.BatchNorm2d(out_channels),
-            nn.LeakyReLU()
+            nn.LeakyReLU(inplace=True)
         )
 
     def forward(self, x):
@@ -68,7 +69,7 @@ class YOLO_V1(nn.Module):
         self.Fc = nn.Sequential(
             nn.Dropout(0.5),
             nn.Linear(7*7*1024,4096),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             nn.Dropout(0.5),
             nn.Linear(4096,7 * 7 * (B*5 + Classes_Num)),
             nn.Sigmoid()
@@ -82,13 +83,13 @@ class YOLO_V1(nn.Module):
         x = self.Conv_14(x)
         x = self.Conv_7(x)
         # batch_size * channel * height * weight -> batch_size * height * weight * channel
-        x = x.permute(0,2,3,1).contiguous()
+        # x = x.permute(0,2,3,1).contiguous()
         x = x.view(-1,7*7*1024)
         x = self.Fc(x)
         x = x.view((-1,7,7,(self.B*5 + self.Classes_Num)))
         return x
 
-        # 定义权值初始化
+    # 定义权值初始化
     def initialize_weights(self):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
