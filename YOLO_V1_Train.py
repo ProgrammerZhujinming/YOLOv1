@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 dataLoader = DataLoader(dataSet,batch_size=32,shuffle=True,num_workers=4)
 
 #---------------step2:Model-------------------
-from YOLO_v1_Model import YOLO_V1
+from YOLO_V1_Model import YOLO_V1
 Yolo = YOLO_V1().cuda(device=1)
 Yolo.initialize_weights()
 
@@ -17,7 +17,7 @@ loss_function = Yolov1_Loss().cuda(device=1)
 #---------------step4:Optimizer-------------------
 import torch.optim as optim
 optimizer = optim.SGD(Yolo.parameters(),lr=3e-3,momentum=0.9,weight_decay=0.0005)
-scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,milestones=[200,400,600,800,1000,2000,5000,10000],gamma=0.9)
+scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,milestones=[100,200,300,400,500,600,700,800,900,1000,2000,3000,4000,5000,6000,7000,8000,9000,10000,20000,30000,40000],gamma=0.9)
 
 #--------------step5:Tensorboard Feature Map------------
 from tensorboardX import SummaryWriter
