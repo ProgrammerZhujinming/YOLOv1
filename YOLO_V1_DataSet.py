@@ -101,6 +101,5 @@ class YoloV1DataSet(Dataset):
         img_data = self.transfrom(img_data)
         return img_data,self.ground_truth[item]
 
-
     def __len__(self):
         return len(self.img_path)
