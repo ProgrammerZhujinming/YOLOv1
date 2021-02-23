@@ -35,7 +35,8 @@ Tensorboard功能有待完善、目前迭代正常
 
 # 更新日志 2-23
 1.修复了从训练中恢复时，代码的TensorboardX记录错乱的问题  
-该问题的原因是，在训练过程中，每一个epoch都进行了记录，但是我们的网络权重文件是100个epoch或者1000个epoch才记录的，若我们在233个epoch停止了训练，此时event里记录了1~233个epoch，而我们恢复训练的时候，是从201开始的，201~233的数据会有两份，因此才会导致数据错乱的问题。实验代码：  
+该问题的原因是，在训练过程中，每一个epoch都进行了记录，但是我们的网络权重文件是100个epoch或者1000个epoch才记录的，若我们在233个epoch停止了训练，此时event里记录了1~233个epoch，而我们恢复训练的时候，是从201开始的，201~233的数据会有两份，因此才会导致数据错乱的问题。  
+实验代码：  
 ex1.py:  
 from tensorboardX import SummaryWriter  
 writer = SummaryWriter(logdir='runs')  
