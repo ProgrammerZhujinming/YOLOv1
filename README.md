@@ -51,4 +51,4 @@ writer.add_scalar('Train/Loss_sum', 5, 3)
 writer.add_scalar('Train/Loss_sum', 6, 4)  
 writer.close()  
 分别执行上述两段代码，会生成两个event文件，用Tensorboard监控后会发现曲线图全部乱掉，epoch2、epoch3会存在两份数据，而不会用新的覆盖旧的。  
-解决办法：SummaryWriter对event的保存与pth的保存同步就行了~  
+解决办法：SummaryWriter对event的保存与pth的保存同步就行了，当重新训练时，删除那些不与pth同步的event即可~  
