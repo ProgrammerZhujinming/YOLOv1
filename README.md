@@ -1,5 +1,5 @@
 # YOLO_V1_GPU  
-个人博客YOLO v1算法详解地址：https://blog.csdn.net/qq_39304630/article/details/112394446
+个人博客YOLO v1算法详解地址：https://blog.csdn.net/qq_39304630/article/details/112394446  
 Tensorboard功能有待完善、目前迭代正常  
 环境要求：  
 1.PyTorch >= 1.1.0  
