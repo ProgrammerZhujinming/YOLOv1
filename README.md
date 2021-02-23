@@ -32,3 +32,23 @@ Tensorboard功能有待完善、目前迭代正常
 # 更新日志 2-21  
 1.修复loss的错误反传(在计算loss时，如果使用数学函数，需要将math换成torch，否则不支持反传，同时torch.sqrt的导数在0处无定义，需要加上一个偏置值1e-8，避免出现0处的导数nan的问题)；为了避免显存占用过大的问题(计算loss时生成了过多的中间节点导致)，对于各项损失，使用数学函数计算，而用于反传的loss不再拆开（拆开会在累加时，由于PyTorch动态图的特点，生成过多的中间节点，导致严重的显存泄露问题），而是采用标量配合数学函数库math进行计算统计  
 2.增加了一个全卷积的YOLO v1结构，用来避免训练过程中由于reshape导致特征图错乱的问题，作为对原YOLO V1算法的优化拓展  
+
+# 更新日志 2-23
+1.修复了从训练中恢复时，代码的TensorboardX记录错乱的问题  
+该问题的原因是，在训练过程中，每一个epoch都进行了记录，但是我们的网络权重文件是100个epoch或者1000个epoch才记录的，若我们在233个epoch停止了训练，此时event里记录了1~233个epoch，而我们恢复训练的时候，是从201开始的，201~233的数据会有两份，因此才会导致数据错乱的问题。实验代码：  
+ex1.py:  
+from tensorboardX import SummaryWriter  
+writer = SummaryWriter(logdir='runs')  
+writer.add_scalar('Train/Loss_sum', 1, 1)  
+writer.add_scalar('Train/Loss_sum', 2, 2)  
+writer.add_scalar('Train/Loss_sum', 3, 3)  
+writer.close()  
+
+ex2.py:  
+writer = SummaryWriter(logdir='runs')  
+writer.add_scalar('Train/Loss_sum', 4, 2)  
+writer.add_scalar('Train/Loss_sum', 5, 3)  
+writer.add_scalar('Train/Loss_sum', 6, 4)  
+writer.close()  
+分别执行上述两段代码，会生成两个event文件，用Tensorboard监控后会发现曲线图全部乱掉，epoch2、epoch3会存在两份数据，而不会用新的覆盖旧的。  
+解决办法：SummaryWriter对event的保存与pth的保存同步就行了~  
