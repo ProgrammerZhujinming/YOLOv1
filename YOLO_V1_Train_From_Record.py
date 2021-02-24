@@ -72,8 +72,10 @@ while epoch <= 2000*dataSet.Classes:
         #feature_map_visualize(train_data[0][0], writer)
         print("batch_index : {} ; batch_loss : {}".format(batch_index, batch_loss))
     epoch = epoch + 1
-    if (epoch < 1000 and epoch % 100 == 0) or epoch % 1000 == 0:
+    if epoch % 100 == 0:
         torch.save(Yolo.state_dict(), './YOLO_V1_' + str(epoch) + '.pth')
+        writer.close()
+        writer = SummaryWriter(logdir='log',filename_suffix=str(epoch) + '~' + str(epoch + 100))
     print("epoch : {} ; loss : {}".format(epoch,{loss_sum}))
     for name, layer in Yolo.named_parameters():
         writer.add_histogram(name + '_grad', layer.grad.cpu().data.numpy(), epoch)
