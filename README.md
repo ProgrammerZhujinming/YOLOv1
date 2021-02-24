@@ -21,7 +21,7 @@ Tensorboard功能有待完善、目前迭代正常
 1.增加各种loss的tensorboard曲线图监控  
 2.增加特征图输出功能--由于本人选择在每一个batch后都输出一次特征图，因此该功能严重影响训练速度，所以在代码中做了注释处理，如有需要请自行开启：# feature_map_visualize(batch_train[0], writer)，取消注释即可。当然如果想要看到特征图又怕影响训练速度，可以选择将特征图的显示放在每一个epoch而不是batch中。  
 3.使用特征图功能可能会遇到TypeError: clamp_(): argument ‘min’ must be Number, not Tensor，此时需要修改torchvison.utils源码，将norm_ip(t, t.min(), t.max())改为norm_ip(t, float(t.min()), float(t.max()))  
-4.因本项目初期为避免精度误差而将坐标误差采用回归到原图像尺度上的方式进行计算Loss，最终未回归至0-1区间，导致了坐标误差与其他误差的差距过大。当前版本loss的坐标损失已经归一化到0-1区间  
+4.因本项目初期为避免精度误差而将坐标误差采用回归到原图像尺度上的方式进行计算Loss，最终未回归至0-1区间，导致了坐标loss与其他loss的差距过大，在迭代过程中不能权衡训练方向，当前版本loss的坐标损失已经归一化到0-1区间。  
 
 # 更新日志 2-20
 1.设置学习率多步长衰减策略  
