@@ -14,7 +14,7 @@ classIndex = 0
 with open(class_file_name, 'r') as f:
     for line in f:
         line = line.replace('\n', '')
-        class_index_Name[line] = classIndex  # 根据类别名制作索引
+        class_index_Name[classIndex] = line  # 根据类别名制作索引
         classIndex = classIndex + 1
 
 #------step:4 NMS算法处理输出结果------
@@ -45,7 +45,7 @@ def NMS(bounding_boxes,S=7,B=2,img_size=448,confidence_threshold=0.5,iou_thresho
                     bounding_box = bounding_boxes[batch][i][j][0:5]
                 bounding_box.extend(bounding_boxes[batch][i][j][10:])
                 if bounding_box[4] >= confidence_threshold:
-                    predict_boxes.append(bounding_box)
+                    continue
                 centerX = (int)(gridX + bounding_box[0] * grid_size)
                 centerY = (int)(gridY + bounding_box[1] * grid_size)
                 width = (int)(bounding_box[2] * grid_size)
@@ -54,6 +54,7 @@ def NMS(bounding_boxes,S=7,B=2,img_size=448,confidence_threshold=0.5,iou_thresho
                 bounding_box[1] = max(0, (int)(centerY - height / 2))
                 bounding_box[2] = min(img_size - 1, (int)(centerX + width / 2))
                 bounding_box[3] = min(img_size - 1, (int)(centerY + height / 2))
+                predict_boxes.append(bounding_box)
 
         while len(predict_boxes) != 0:
             predict_boxes.sort(key=lambda box:box[4])
@@ -85,7 +86,7 @@ while True:
     success, img_data = capture.read()
     img_data = cv2.resize(img_data, (448, 448), interpolation=cv2.INTER_AREA)
     train_data = transform(img_data).cuda()
-    train_data = train_data.resize(1, 448, 448, 3)
+    train_data = train_data.unsqueeze(0)
     bounding_boxes = YoloV1(train_data)
     NMS_boxes = NMS(bounding_boxes)
     for box in NMS_boxes:
