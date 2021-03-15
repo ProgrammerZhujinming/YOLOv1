@@ -73,6 +73,8 @@ class YOLO_V1(nn.Module):
             nn.Conv2d(256,self.B * 5 + self.Classes_Num,1,1,0),
             nn.Sigmoid()
         )
+        
+        self.softmax = nn.Softmax()
 
     def forward(self, x):
         x = self.Conv_448(x)
@@ -83,6 +85,8 @@ class YOLO_V1(nn.Module):
         x = self.Conv_7(x)
         x = self.Conv_Res(x)
         x = x.permute(0,2,3,1)
+        class_possible = self.softmax(x[:,:,:,10:])
+        x = torch.cat((x[:,:,:,0:10],class_possible),dim=3)
         return x
 
     # 定义权值初始化
