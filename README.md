@@ -51,9 +51,13 @@ writer.add_scalar('Train/Loss_sum', 4, 2)
 writer.add_scalar('Train/Loss_sum', 5, 3)  
 writer.add_scalar('Train/Loss_sum', 6, 4)  
 writer.close()  
-分别执行上述两段代码，会生成两个event文件，用Tensorboard监控后会发现曲线图全部乱掉，epoch2、epoch3会存在两份数据，而不会用新的覆盖旧的。  
+分别执行上述两段代码，会生成两个event文件，用Tensorboard监控后会发现曲线图全部乱掉，epoch2、epoch3会存在两份数据，而不会用新的覆盖旧的，而是会根据生成的时间强行拼接，因此才导致了错乱的问题 
 解决办法：SummaryWriter对event的保存与pth的保存同步就行了，当重新训练时，删除那些不与pth同步的event即可~  
 2.增加了读取视频、摄像头、图片进行检测输出的功能
 
 # 更新日志 2-24
 1.鉴于本人的实验环境机器存在过热关机的情况，模型保存方式已经修改为100个epoch保存一次，如各位不存在该问题，请忽略  
+
+# 更新日志 3-14
+1.将类别预测的输出通过softmax函数作用后变为更加可靠的可能性大小输出
+2.修复图片、摄像头、视频检测代码中的bug
