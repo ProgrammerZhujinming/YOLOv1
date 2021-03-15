@@ -74,6 +74,8 @@ class YOLO_V1(nn.Module):
             nn.Linear(4096,7 * 7 * (B*5 + Classes_Num)),
             nn.Sigmoid()
         )
+        
+        self.softmax = nn.Softmax()
 
     def forward(self, x):
         x = self.Conv_448(x)
@@ -87,8 +89,9 @@ class YOLO_V1(nn.Module):
         x = x.view(-1,7*7*1024)
         x = self.Fc(x)
         x = x.view((-1,7,7,(self.B*5 + self.Classes_Num)))
+        x = torch.cat((x[:,0:10],self.softmax(x[:,10:])),dim=1)
         return x
-
+    
     # 定义权值初始化
     def initialize_weights(self):
         for m in self.modules():
