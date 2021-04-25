@@ -62,5 +62,5 @@ writer.close()
 1.将类别预测的输出通过softmax函数作用后变为更加可靠的可能性大小输出  
 2.修复图片、摄像头、视频检测代码中的bug  
 
-# bug日志 4-25  
-在tensorboardX中的图中，iou_avg有时会显示超过1，正在排查错误来源  
+# 更新日志 4-25  
+修复了在迭代后期，avg_iou超过1的Bug,事故代码为interSection = (CrossRX - CrossLX + 1) * (CrossDY - CrossUY + 1)，当时也不知道脑子抽的什么风。。。  
