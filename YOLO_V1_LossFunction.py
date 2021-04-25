@@ -1,6 +1,7 @@
 import torch.nn as nn
 import math
 import torch
+import sys
 
 class Yolov1_Loss(nn.Module):
 
@@ -42,7 +43,15 @@ class Yolov1_Loss(nn.Module):
         if CrossRX < CrossLX or CrossDY < CrossUY: # 没有交集
             return 0
 
-        interSection = (CrossRX - CrossLX + 1) * (CrossDY - CrossUY + 1)
+        interSection = (CrossRX - CrossLX) * (CrossDY - CrossUY)
+
+        if interSection > (predict_Area + ground_Area - interSection):
+            print("interSection:{} predict_Area:{} ground_Area:{}".format(interSection, predict_Area, ground_Area))
+            print("predictLX:{} predictLY:{} predictRX:{} predictRY:{}".format(predict_coord[0], predict_coord[1], predict_coord[2], predict_coord[3]))
+            print("groundLX:{} groundLY:{} groundRX:{} groundRY:{}".format(ground_coord[0], ground_coord[1], ground_coord[2], ground_coord[3]))
+            print("interLX:{} interLY:{} interRX:{} interRY:{}".format(CrossLX, CrossUY, CrossRX, CrossDY))
+            sys.exit()
+            
         return interSection / (predict_Area + ground_Area - interSection)
 
     def forward(self, bounding_boxes, ground_truth, batch_size=32,grid_size=64, img_size=448):  # 输入是 S * S * ( 2 * B + Classes)
