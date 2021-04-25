@@ -63,4 +63,4 @@ writer.close()
 2.修复图片、摄像头、视频检测代码中的bug  
 
 # 更新日志 4-25  
-修复了在迭代后期，avg_iou超过1的Bug,事故代码为interSection = (CrossRX - CrossLX + 1) * (CrossDY - CrossUY + 1)，当时也不知道脑子抽的什么风。。。  
+1.修复了在迭代后期，avg_iou超过1的Bug,事故代码为interSection = (CrossRX - CrossLX + 1) * (CrossDY - CrossUY + 1)，正确写法应为interSection = (CrossRX - CrossLX) * (CrossDY - CrossUY)，当时也不知道脑子抽的什么风=-=  
