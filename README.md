@@ -64,3 +64,6 @@ writer.close()
 
 # 更新日志 4-25  
 1.修复了在迭代后期，avg_iou超过1的Bug,事故代码为interSection = (CrossRX - CrossLX + 1) * (CrossDY - CrossUY + 1)，正确写法应为interSection = (CrossRX - CrossLX) * (CrossDY - CrossUY)，当时也不知道脑子抽的什么风=-=  
+
+# 更新日志 5-6
+1.在PyTorch1.6版本之后，对于网络参数的保存方式采用了ZIP格式压缩，因此在切换到较低版本的PyTorch环境中使用之前，需要将模型参数的保存方式进行修改，因此增加了一个可以用于格式转换的transform_pth_format.py
