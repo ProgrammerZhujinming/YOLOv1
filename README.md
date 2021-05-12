@@ -66,4 +66,7 @@ writer.close()
 1.修复了在迭代后期，avg_iou超过1的Bug,事故代码为interSection = (CrossRX - CrossLX + 1) * (CrossDY - CrossUY + 1)，正确写法应为interSection = (CrossRX - CrossLX) * (CrossDY - CrossUY)，当时也不知道脑子抽的什么风=-=  
 
 # 更新日志 5-6
-1.在PyTorch1.6版本之后，对于网络参数的保存方式采用了ZIP格式压缩，因此在切换到较低版本的PyTorch环境中使用之前，需要将模型参数的保存方式进行修改，因此增加了一个可以用于格式转换的transform_pth_format.py
+1.在PyTorch1.6版本之后，对于网络参数的保存方式采用了ZIP格式压缩，因此在切换到较低版本的PyTorch环境中使用之前，需要将模型参数的保存方式进行修改，因此增加了一个可以用于格式转换的transform_pth_format.py  
+
+# 日志 5-12
+1.在当前版本，对于每个grid cell输出的bounding_box，认为两个box中置信度高的那个做了针对物体的预测，在计算置信度损失时，没有根据阈值判定box预测的是背景还是物体，而是统一做误差，这可能会导致在置信度这一块训练的困难，正考虑加入合适的阈值进行软化  
