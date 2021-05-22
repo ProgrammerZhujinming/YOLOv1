@@ -99,6 +99,6 @@ class Yolov1_Loss(nn.Module):
         return loss, loss_coord, loss_confidence, loss_classes, iou_sum, object_num
     
         def setLossWeight(self, epoch):
-			if epoch > 6000:
-				self.l_coord = 1
-				self.l_noobj = 1
+		if epoch > 6000:
+			self.l_coord = 1
+			self.l_noobj = 1
