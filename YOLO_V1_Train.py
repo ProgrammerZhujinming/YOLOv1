@@ -48,7 +48,8 @@ while epoch <= 2000*dataSet.Classes:
     epoch_iou = 0
     epoch_object_num = 0
     scheduler.step()
-
+    loss_function.setLossWeight(epoch)
+    
     for batch_index, batch_train in enumerate(dataLoader):
         optimizer.zero_grad()
         train_data = batch_train[0].float().cuda(device=1)
