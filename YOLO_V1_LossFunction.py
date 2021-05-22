@@ -97,3 +97,8 @@ class Yolov1_Loss(nn.Module):
                         loss_classes += mseLoss(ground_class,predict_class).item() * self.Classes
         print("坐标误差:{} 置信度误差:{} 类别损失:{} iou_sum:{} object_num:{} iou:{}".format(loss_coord, loss_confidence, loss_classes, iou_sum, object_num, "nan" if object_num == 0 else (iou_sum / object_num)))
         return loss, loss_coord, loss_confidence, loss_classes, iou_sum, object_num
+    
+        def setLossWeight(self, epoch):
+			if epoch > 6000:
+				self.l_coord = 1
+				self.l_noobj = 1
