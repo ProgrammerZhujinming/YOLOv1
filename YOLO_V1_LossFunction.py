@@ -5,7 +5,7 @@ import sys
 
 class Yolov1_Loss(nn.Module):
 
-    def __init__(self, S=7, B=2, Classes=20, l_coord=5, l_noobj=0.5):
+    def __init__(self, S=7, B=2, Classes=20, l_coord=5, l_noobj=0.5, epoch=6000):
         # 有物体的box损失权重设为l_coord,没有物体的box损失权重设置为l_noobj
         super(Yolov1_Loss, self).__init__()
         self.S = S
@@ -13,6 +13,7 @@ class Yolov1_Loss(nn.Module):
         self.Classes = Classes
         self.l_coord = l_coord
         self.l_noobj = l_noobj
+	self.epoch = epoch
 
     def iou(self, bounding_box, ground_box, gridX, gridY, img_size=448, grid_size=64):  # 计算两个box的IoU值
         # predict_box: [centerX, centerY, width, height]
@@ -99,6 +100,6 @@ class Yolov1_Loss(nn.Module):
         return loss, loss_coord, loss_confidence, loss_classes, iou_sum, object_num
     
         def setLossWeight(self, epoch):
-		if epoch > 6000:
-			self.l_coord = 1
-			self.l_noobj = 1
+            if epoch > self.epoch:
+                self.l_coord = 1
+                self.l_noobj = 1
