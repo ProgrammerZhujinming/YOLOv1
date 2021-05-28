@@ -54,24 +54,32 @@ while epoch <= 2000*dataSet.Classes:
     scheduler.step()
     loss_function.setLossWeight(epoch)
     
-    for batch_index, batch_train in enumerate(dataLoader):
-        optimizer.zero_grad()
-        train_data = batch_train[0].float().cuda(device=1)
-        train_data.requires_grad = True
-        label_data = batch_train[1].float().cuda(device=1)
-        loss = loss_function(bounding_boxes=Yolo(train_data),ground_truth=label_data)
-        batch_loss = loss[0]
-        loss_coord = loss_coord + loss[1]
-        loss_confidence = loss_confidence + loss[2]
-        loss_classes = loss_classes + loss[3]
-        epoch_iou = epoch_iou + loss[4]
-        epoch_object_num = epoch_object_num + loss[5]
-        batch_loss.backward()
-        optimizer.step()
-        batch_loss = batch_loss.item()
-        loss_sum = loss_sum + batch_loss
-        #feature_map_visualize(train_data[0][0], writer)
-        print("batch_index : {} ; batch_loss : {}".format(batch_index, batch_loss))
+    with tqdm(total=dataLoader.__len__()) as tbar:
+
+        for batch_index, batch_train in enumerate(dataLoader):
+            optimizer.zero_grad()
+            train_data = batch_train[0].float().cuda(device=0)
+            train_data.requires_grad = True
+            label_data = batch_train[1].float().cuda(device=0)
+            loss = loss_function(bounding_boxes=Yolo(train_data),ground_truth=label_data)
+            batch_loss = loss[0]
+            loss_coord = loss_coord + loss[1]
+            loss_confidence = loss_confidence + loss[2]
+            loss_classes = loss_classes + loss[3]
+            epoch_iou = epoch_iou + loss[4]
+            epoch_object_num = epoch_object_num + loss[5]
+            batch_loss.backward()
+            optimizer.step()
+            batch_loss = batch_loss.item()
+            loss_sum = loss_sum + batch_loss
+    
+            tbar.disable = False
+            tbar.set_description("coord_loss:{} confidence_loss:{} class_loss:{}".format(loss[0], loss[1], loss[2]), refresh=True)
+            tbar.update(1)
+
+            #feature_map_visualize(train_data[0][0], writer)
+            #print("batch_index : {} ; batch_loss : {}".format(batch_index, batch_loss))
+            
     epoch = epoch + 1
     if epoch % 100 == 0:
         torch.save(Yolo.state_dict(), './YOLO_V1_' + str(epoch) + '.pth')
