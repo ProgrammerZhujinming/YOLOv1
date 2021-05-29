@@ -1,3 +1,4 @@
+import random
 from torch.utils.data import Dataset
 import os
 import cv2
@@ -36,6 +37,7 @@ class YoloV1DataSet(Dataset):
         print(self.ClassNameToInt)
         self.Classes = classIndex # 一共的类别个数
         self.getGroundTruth()
+        self.data = [list([self.img_path[i], self.ground_truth[i]]) for i in range(len(self.img_path))]
 
     # PyTorch 无法将长短不一的list合并为一个Tensor
     def getGroundTruth(self):
@@ -96,10 +98,13 @@ class YoloV1DataSet(Dataset):
 
     def __getitem__(self, item):
         # height * width * channel
-        img_data = cv2.imread(self.img_path[item])
+        img_data = cv2.imread(self.data[item][0])
         img_data = cv2.resize(img_data, (448, 448), interpolation=cv2.INTER_AREA)
         img_data = self.transfrom(img_data)
-        return img_data,self.ground_truth[item]
+        return img_data,self.data[item][1]
 
     def __len__(self):
         return len(self.img_path)
+
+    def shuffleData(self):
+        random.shuffle(self.data)
