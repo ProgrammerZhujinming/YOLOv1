@@ -82,3 +82,4 @@ writer.close()
 1.对DataSet加入shuffle函数用以打乱数据集，并加入10折交叉验证，用以协助手动调整超参数。（目前仅针对YOLO_V1_Train_From_Record.py做了更变，YOLO_V1_Train.py不变）  
 2.目前项目输出的各种标准值 大多都是 mean-batch的，正考虑下一步方案。  
 3.将模型中 使用view拉平向量的方式 更改为 更加简洁的 faltten。  
+4.由于git lfs免费使用只能上传不超过1G的文件，而权重文件已经达到了 1.01G，因此本人无法在此提供权重文件，如确有需要，可通过csdn私信我获取，谢谢。  
