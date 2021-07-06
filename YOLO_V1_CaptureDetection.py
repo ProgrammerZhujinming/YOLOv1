@@ -4,7 +4,7 @@ YoloV1 = YOLO_V1().cuda()
 
 #------step:2 读取权重文件------
 import torch
-weight_file_name = "YOLO_V1_100.pth"
+weight_file_name = "YOLO_V1_5900.pth"
 YoloV1.load_state_dict(torch.load(weight_file_name))
 
 #------step:3 类别索引与类别名的映射------
@@ -29,7 +29,7 @@ def iou(box_one, box_two):
     return (RX - LX) * (RY - LY) / ((box_one[2]-box_one[0]) * (box_one[3] - box_one[1]) + (box_two[2]-box_two[0]) * (box_two[3] - box_two[1]))
 
 import numpy as np
-def NMS(bounding_boxes,S=7,B=2,img_size=448,confidence_threshold=0.5,iou_threshold=0.7):
+def NMS(bounding_boxes,S=7,B=2,img_size=448,confidence_threshold=0.9,iou_threshold=0.3):
     bounding_boxes = bounding_boxes.cpu().detach().numpy().tolist()
     predict_boxes = []
     nms_boxes = []
@@ -37,19 +37,20 @@ def NMS(bounding_boxes,S=7,B=2,img_size=448,confidence_threshold=0.5,iou_thresho
     for batch in range(len(bounding_boxes)):
         for i in range(S):
             for j in range(S):
-                gridX = grid_size * i
-                gridY = grid_size * j
+                gridX = grid_size * j
+                gridY = grid_size * i
                 if bounding_boxes[batch][i][j][4] < bounding_boxes[batch][i][j][9]:
                     bounding_box = bounding_boxes[batch][i][j][5:10]
                 else:
                     bounding_box = bounding_boxes[batch][i][j][0:5]
-                bounding_box.extend(bounding_boxes[batch][i][j][10:])
-                if bounding_box[4] >= confidence_threshold:
+                class_possible = (bounding_boxes[batch][i][j][10:])
+                bounding_box.extend(class_possible)
+                if bounding_box[4] < confidence_threshold:
                     continue
                 centerX = (int)(gridX + bounding_box[0] * grid_size)
                 centerY = (int)(gridY + bounding_box[1] * grid_size)
-                width = (int)(bounding_box[2] * grid_size)
-                height = (int)(bounding_box[3] * grid_size)
+                width = (int)(bounding_box[2] * img_size)
+                height = (int)(bounding_box[3] * img_size)
                 bounding_box[0] = max(0, (int)(centerX - width / 2))
                 bounding_box[1] = max(0, (int)(centerY - height / 2))
                 bounding_box[2] = min(img_size - 1, (int)(centerX + width / 2))
@@ -94,7 +95,7 @@ while True:
         img_data = cv2.rectangle(img_data, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 1)
         img_data = cv2.putText(img_data, "class:{} confidence:{}".format(class_index_Name[box[5]], box[4]),
                                (box[0], box[1]), cv2.FONT_HERSHEY_PLAIN, 0.5, (0, 0, 255), 1)
-
+        print("class:{}".format(class_index_Name[box[5]]))
     cv2.imshow("video_detection", img_data)
     cv2.waitKey(20)
 

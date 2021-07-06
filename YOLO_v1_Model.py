@@ -6,8 +6,8 @@ class Convention(nn.Module):
         super(Convention,self).__init__()
         self.Conv = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, conv_size, conv_stride, padding),
-            nn.BatchNorm2d(out_channels),
-            nn.LeakyReLU(inplace=True)
+            nn.ReLU(inplace=True),
+            nn.BatchNorm2d(out_channels)
         )
 
     def forward(self, x):
@@ -86,8 +86,6 @@ class YOLO_V1(nn.Module):
         # batch_size * channel * height * weight -> batch_size * height * weight * channel
         x = x.permute(0, 2, 3, 1)
         x = torch.flatten(x, start_dim=1, end_dim=3)
-        # x = x.permute(0,2,3,1).contiguous()
-        # x = x.view(-1,7*7*1024)
         x = self.Fc(x)
         x = x.view((-1,7,7,(self.B*5 + self.Classes_Num)))
         x = torch.cat((x[:,0:10],self.softmax(x[:,10:])),dim=1)

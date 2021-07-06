@@ -8,7 +8,8 @@ dataLoader = DataLoader(dataSet,batch_size=16,shuffle=True,num_workers=4)
 #---------------step2:Model-------------------
 from YOLO_V1_Model import YOLO_V1
 Yolo = YOLO_V1().cuda(device=0)
-Yolo.initialize_weights()
+train_file = "YOLO_V1_5900.pth"
+Yolo.load_state_dict(torch.load(train_file))
 
 #---------------step3:LossFunction-------------------
 from YOLO_V1_LossFunction import  Yolov1_Loss
@@ -17,8 +18,8 @@ loss_function = Yolov1_Loss().cuda(device=0)
 #---------------step4:Optimizer-------------------
 import torch.optim as optim
 optimizer_SGD = optim.SGD(Yolo.parameters(),lr=1e-3,weight_decay=0.0005)
-#使用余弦退火动态调整学习率
-lr_reduce_scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer_SGD , T_max=10, eta_min=1e-4, last_epoch=-1)
+#根据指标变化哦嗯泰调整学习率
+lr_reduce_scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer_SGD , mode='min', factor=0.1, patience=10, verbose=True)
 
 #--------------step5:Tensorboard Feature Map------------
 from tensorboardX import SummaryWriter
@@ -122,7 +123,7 @@ while epoch <= 2000 * dataSet.classNum:
             batch_loss = batch_loss.item()
             epoch_val_loss = epoch_val_loss + batch_loss
 
-            tbar.set_description("val: coord_loss:{} confidence_loss:{} class_loss:{} iou:{}".format(round(loss[1], 4), round(loss[2], 4), round(loss[3], 4), round(loss[4] / loss[5], 4)), refresh=True)
+            tbar.set_description("val: coord_loss:{} confidence_loss:{} class_loss:{} iou:{}".format(round(loss[1], 4), round(loss[2], 4), round(loss[3], 4), round(loss[4].item() / loss[5], 4)), refresh=True)
             tbar.update(1)
 
             # feature_map_visualize(train_data[0][0], writer)
