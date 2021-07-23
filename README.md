@@ -15,7 +15,7 @@ Tensorboard功能有待完善、目前迭代正常
 1.本项目注重的是对YOLO v1原文的复现，训练的入口为YOLO V1_Train.py  
 2.FromRecord用于从中断的训练中恢复  
 3.默认采用的策略是每一个class训练2000个epoch  
-4.项目的权重保存策略为 epoch < 1000 时每100个epoch保存一次，每次同时保存优化器与执行的周期数  
+4.项目的权重保存策略为每100个epoch保存一次，每次同时保存优化器与执行的周期数epoch  
 5.需要注意的是，对于windows系统，要求DataLoader的num_worker必须为0  
 # 更新日志 2-18  
 1.增加各种loss的tensorboard曲线图监控  
