@@ -1,15 +1,17 @@
 #---------------step1:Dataset-------------------
 import torch
 from YOLO_V1_DateSet import YoloV1DataSet
-dataSet = YoloV1DataSet(imgs_dir="../VOC2007/Train/JPEGImages",annotations_dir="../VOC2007/Train/Annotations",ClassesFile="../VOC2007/Train/class.data")
+dataSet = YoloV1DataSet(imgs_dir="./VOC2007/Train/JPEGImages",annotations_dir="./VOC2007/Train/Annotations",ClassesFile="./VOC2007/Train/class.data")
 from torch.utils.data import DataLoader
-dataLoader = DataLoader(dataSet,batch_size=16,shuffle=True,num_workers=4)
 
 #---------------step2:Model-------------------
 from YOLO_V1_Model import YOLO_V1
 Yolo = YOLO_V1().cuda(device=0)
-train_file = "YOLO_V1_5900.pth"
-Yolo.load_state_dict(torch.load(train_file))
+weight_file = "./YOLO_V1_100.pth"
+param_dict = torch.load(weight_file)
+print(param_dict)
+Yolo.load_state_dict(param_dict['model'])
+Yolo.train()
 
 #---------------step3:LossFunction-------------------
 from YOLO_V1_LossFunction import  Yolov1_Loss
@@ -17,15 +19,15 @@ loss_function = Yolov1_Loss().cuda(device=0)
 
 #---------------step4:Optimizer-------------------
 import torch.optim as optim
-optimizer_SGD = optim.SGD(Yolo.parameters(),lr=1e-3,weight_decay=0.0005)
-#根据指标变化哦嗯泰调整学习率
-lr_reduce_scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer_SGD , mode='min', factor=0.1, patience=10, verbose=True)
+#optimizer_Adam = optim.Adam(Yolo.parameters(),lr=3e-4,weight_decay=0.0005)
+optimizer_Adam = param_dict['optim']
+#使用余弦退火动态调整学习率
+#lr_reduce_scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer_Adam , T_max=10, eta_min=1e-4, last_epoch=-1)
 
 #--------------step5:Tensorboard Feature Map------------
 from tensorboardX import SummaryWriter
 import torchvision.utils as vutils
 import torch.nn as nn
-writer = SummaryWriter(logdir='log',filename_suffix=str(0) + '~' + str(100))
 
 def feature_map_visualize(img_data, writer):
     img_data = img_data.unsqueeze(0)
@@ -41,27 +43,26 @@ def feature_map_visualize(img_data, writer):
 #---------------step6:Train-------------------
 from tensorboardX import SummaryWriter
 import torchvision.utils as vutils
-epoch = 0
-writer = SummaryWriter(logdir='log', filename_suffix=' [' + str(epoch) + '~' + str(epoch + 100) + ']')
+epoch = param_dict['epoch']
+writer = SummaryWriter(logdir='./log', filename_suffix=' [' + str(epoch) + '~' + str(epoch + 100) + ']')
 
 from tqdm import tqdm
 
-epoch = epoch + 1
-while epoch <= 2000 * dataSet.classNum:
+print("epoch:{}".format(epoch))
+while epoch <= 200 * dataSet.classNum:
 
-    loss_function.setWeight(epoch)
+    #loss_function.setWeight(epoch)
 
     train_sum = int(dataSet.__len__() + 0.5)
     train_len = int(train_sum * 0.9)
     val_len = train_sum - train_len
 
-    dataSet.shuffleData()
+    #dataSet.shuffleData()
     train_dataSet, val_dataSet = torch.utils.data.random_split(dataSet, [train_len, val_len])
-    train_loader = DataLoader(train_dataSet, batch_size=16, shuffle=True, num_workers=2)
-    val_loader = DataLoader(val_dataSet, batch_size=16, shuffle=True, num_workers=2)
+    train_loader = DataLoader(train_dataSet, batch_size=64, shuffle=True, num_workers=0)
 
     train_len = train_loader.__len__()
-    val_len = val_loader.__len__()
+
     epoch_train_loss = 0
     epoch_val_loss = 0
     epoch_train_iou = 0
@@ -80,7 +81,7 @@ while epoch <= 2000 * dataSet.classNum:
         for batch_index, batch_train in enumerate(train_loader):
 
             train_data = batch_train[0].float().cuda(device=0)
-            train_data.requires_grad = True
+            #train_data.requires_grad = True
             label_data = batch_train[1].float().cuda(device=0)
             loss = loss_function(bounding_boxes=Yolo(train_data),ground_truth=label_data)
             batch_loss = loss[0]
@@ -90,8 +91,8 @@ while epoch <= 2000 * dataSet.classNum:
             epoch_train_iou = epoch_train_iou + loss[4]
             epoch_train_object_num = epoch_train_object_num + loss[5]
             batch_loss.backward()
-            optimizer_SGD.step()
-            optimizer_SGD.zero_grad()
+            optimizer_Adam.step()
+            optimizer_Adam.zero_grad()
             batch_loss = batch_loss.item()
             epoch_train_loss = epoch_train_loss + batch_loss
 
@@ -102,34 +103,37 @@ while epoch <= 2000 * dataSet.classNum:
             #print("batch_index : {} ; batch_loss : {}".format(batch_index, batch_loss))
         print("train-batch-mean loss:{} coord_loss:{} confidence_loss:{} class_loss:{} iou:{}".format(round(epoch_train_loss / train_len, 4), round(epoch_train_loss_coord / train_len, 4), round(epoch_train_loss_confidence / train_len, 4), round(epoch_train_loss_classes / train_len, 4), round(epoch_train_iou / epoch_train_object_num, 4)))
 
-    lr_reduce_scheduler.step(epoch_train_loss)
+    #lr_reduce_scheduler.step(epoch_train_loss)
 
-    with tqdm(total=val_len) as tbar:
+    val_loader = DataLoader(val_dataSet, batch_size=64, shuffle=True, num_workers=0)
+    val_len = val_loader.__len__()
 
-        for batch_index, batch_train in enumerate(val_loader):
-            #optimizer.zero_grad()
-            train_data = batch_train[0].float().cuda(device=0)
-            #train_data.requires_grad = True  验证时计算loss 不需要依附上梯度
-            label_data = batch_train[1].float().cuda(device=0)
-            loss = loss_function(bounding_boxes=Yolo(train_data), ground_truth=label_data)
-            batch_loss = loss[0]
-            epoch_val_loss_coord = epoch_val_loss_coord + loss[1]
-            epoch_val_loss_confidence = epoch_val_loss_confidence + loss[2]
-            epoch_val_loss_classes = epoch_val_loss_classes + loss[3]
-            epoch_val_iou = epoch_val_iou + loss[4]
-            epoch_val_object_num = epoch_val_object_num + loss[5]
-            #batch_loss.backward()
-            #optimizer.step()
-            batch_loss = batch_loss.item()
-            epoch_val_loss = epoch_val_loss + batch_loss
+    with torch.no_grad():
+        with tqdm(total=val_len) as tbar:
 
-            tbar.set_description("val: coord_loss:{} confidence_loss:{} class_loss:{} iou:{}".format(round(loss[1], 4), round(loss[2], 4), round(loss[3], 4), round(loss[4].item() / loss[5], 4)), refresh=True)
-            tbar.update(1)
+            for batch_index, batch_train in enumerate(val_loader):
+                #optimizer.zero_grad()
+                train_data = batch_train[0].float().cuda(device=0)
+                #train_data.requires_grad = True  验证时计算loss 不需要依附上梯度
+                label_data = batch_train[1].float().cuda(device=0)
+                loss = loss_function(bounding_boxes=Yolo(train_data), ground_truth=label_data)
+                batch_loss = loss[0]
+                epoch_val_loss_coord = epoch_val_loss_coord + loss[1]
+                epoch_val_loss_confidence = epoch_val_loss_confidence + loss[2]
+                epoch_val_loss_classes = epoch_val_loss_classes + loss[3]
+                epoch_val_iou = epoch_val_iou + loss[4]
+                epoch_val_object_num = epoch_val_object_num + loss[5]
+                #batch_loss.backward()
+                #optimizer.step()
+                batch_loss = batch_loss.item()
+                epoch_val_loss = epoch_val_loss + batch_loss
 
-            # feature_map_visualize(train_data[0][0], writer)
-            # print("batch_index : {} ; batch_loss : {}".format(batch_index, batch_loss))
-        print("val-batch-mean loss:{} coord_loss:{} confidence_loss:{} class_loss:{} iou:{}".format(round(epoch_val_loss / val_len, 4), round(epoch_val_loss_coord / val_len, 4), round(epoch_val_loss_confidence / val_len, 4), round(epoch_val_loss_classes / val_len, 4), round(epoch_val_iou.item() / epoch_val_object_num, 4)))
+                tbar.set_description("val: coord_loss:{} confidence_loss:{} class_loss:{} iou:{}".format(round(loss[1], 4), round(loss[2], 4), round(loss[3], 4), round(loss[4] / loss[5], 4)), refresh=True)
+                tbar.update(1)
 
+                # feature_map_visualize(train_data[0][0], writer)
+                # print("batch_index : {} ; batch_loss : {}".format(batch_index, batch_loss))
+            print("val-batch-mean loss:{} coord_loss:{} confidence_loss:{} class_loss:{} iou:{}".format(round(epoch_val_loss / val_len, 4), round(epoch_val_loss_coord / val_len, 4), round(epoch_val_loss_confidence / val_len, 4), round(epoch_val_loss_classes / val_len, 4), round(epoch_val_iou / epoch_val_object_num, 4)))
 
     epoch = epoch + 1
     '''
@@ -139,9 +143,13 @@ while epoch <= 2000 * dataSet.classNum:
         writer = SummaryWriter(logdir='log', filename_suffix=' [' + str(epoch) + '~' + str(epoch + 1000) + ']')
     '''
     if epoch % 100 == 0:
-        torch.save(Yolo.state_dict(), './YOLO_V1_' + str(epoch) + '.pth')
+        state = {}
+        state["model"] = Yolo.state_dict()
+        state["optim"] = optimizer_Adam
+        state["epoch"] = epoch
+        torch.save(state, './YOLO_V1_' + str(epoch) + '.pth')
         writer.close()
-        writer = SummaryWriter(logdir='log',filename_suffix=str(epoch) + '~' + str(epoch + 100))
+        writer = SummaryWriter(logdir='log',filename_suffix='[' + str(epoch) + '~' + str(epoch + 100)+']')
     print("epoch : {} ; loss : {}".format(epoch,{epoch_train_loss}))
     for name, layer in Yolo.named_parameters():
         writer.add_histogram(name + '_grad', layer.grad.cpu().data.numpy(), epoch)

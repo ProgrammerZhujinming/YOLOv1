@@ -9,7 +9,7 @@ import numpy as np
 
 class YoloV1DataSet(Dataset):
 
-    def __init__(self, imgs_dir="../VOC2007/Train/JPEGImages", annotations_dir="../VOC2007/Train/Annotations", img_size=448, S=7, B=2, ClassesFile="../VOC2007/Train/class.data", label_smooth_value = 0.05): # 图片路径、注解文件路径、图片尺寸、每个grid cell预测的box数量、类别文件
+    def __init__(self, imgs_dir="./VOC2007/Train/JPEGImages", annotations_dir="./VOC2007/Train/Annotations", img_size=448, S=7, B=2, ClassesFile="../VOC2007/Train/class.data", label_smooth_value = 0.05): # 图片路径、注解文件路径、图片尺寸、每个grid cell预测的box数量、类别文件
         img_names = os.listdir(imgs_dir)
         img_names.sort()
         self.transfrom = transforms.Compose([

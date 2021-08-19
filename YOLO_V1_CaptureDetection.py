@@ -6,6 +6,7 @@ YoloV1 = YOLO_V1().cuda()
 import torch
 weight_file_name = "YOLO_V1_5900.pth"
 YoloV1.load_state_dict(torch.load(weight_file_name))
+Yolo.eval()
 
 #------step:3 类别索引与类别名的映射------
 class_file_name = "./VOC2007/Train/class.data"

@@ -6,12 +6,22 @@ class Convention(nn.Module):
         super(Convention,self).__init__()
         self.Conv = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, conv_size, conv_stride, padding),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(inplace=True),
             nn.BatchNorm2d(out_channels)
         )
 
     def forward(self, x):
         return self.Conv(x)
+
+    def weight_init(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                torch.nn.init.kaiming_normal_(m.weight.data)
+                if m.bias is not None:
+                    m.bias.data.zero_()
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
 
 class YOLO_V1(nn.Module):
 
@@ -74,7 +84,7 @@ class YOLO_V1(nn.Module):
             nn.Linear(4096,7 * 7 * (B*5 + Classes_Num)),
             nn.Sigmoid()
         )
-        self.softmax = nn.Softmax()
+        self.softmax = nn.Softmax(dim=1)
 
     def forward(self, x):
         x = self.Conv_448(x)
@@ -95,7 +105,7 @@ class YOLO_V1(nn.Module):
     def initialize_weights(self):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                torch.nn.init.xavier_normal_(m.weight.data)
+                torch.nn.init.kaiming_normal_(m.weight.data)
                 if m.bias is not None:
                     m.bias.data.zero_()
             elif isinstance(m, nn.BatchNorm2d):
@@ -104,3 +114,5 @@ class YOLO_V1(nn.Module):
             elif isinstance(m, nn.Linear):
                 torch.nn.init.normal_(m.weight.data, 0, 0.01)
                 m.bias.data.zero_()
+            elif isinstance(m, Convention):
+                m.weight_init()

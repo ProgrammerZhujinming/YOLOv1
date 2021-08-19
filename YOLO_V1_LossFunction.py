@@ -5,7 +5,7 @@ import torch
 
 class Yolov1_Loss(nn.Module):
 
-    def __init__(self, S=7, B=2, Classes=20, l_coord=5, l_noobj=0.5, epcoh_threshold = 500):
+    def __init__(self, S=7, B=2, Classes=20, l_coord=5, l_noobj=0.5, epcoh_threshold = 400):
         # 有物体的box损失权重设为l_coord,没有物体的box损失权重设置为l_noobj
         super(Yolov1_Loss, self).__init__()
         self.S = S
@@ -64,6 +64,55 @@ class Yolov1_Loss(nn.Module):
         for batch in range(len(bounding_boxes)):
             for indexRow in range(self.S):  # 先行 - Y
                 for indexCol in range(self.S):  # 后列 - X
+                    bounding_box = bounding_boxes[batch][indexRow][indexCol]
+                    predict_box_one = bounding_box [0:5]
+                    predict_box_two = bounding_box [5:10]
+                    ground_box = ground_truth[batch][indexRow][indexCol]
+                    # 1.如果此处ground_truth不存在 即只有背景 那么两个框均为负样本
+                    if (int)(ground_box[9].item() + 0.1) == 0:  # 面积为0的grount_truth 表明此处只有背景
+                        loss = loss + self.l_noobj * torch.pow(predict_box_one[4], 2) + torch.pow(predict_box_two[4], 2)
+                        loss_confidence += self.l_noobj * math.pow(predict_box_one[4].item(), 2) + math.pow(predict_box_two[4].item(), 2)
+                    else:
+                        object_num = object_num + 1
+                        predict_iou_one =  self.iou(predict_box_one, ground_box, indexCol * 64, indexRow * 64)
+                        predict_iou_two = self.iou(predict_box_two, ground_box, indexCol * 64, indexRow * 64)
+                        # 改进：让两个预测的box与ground box拥有更大iou的框进行拟合 让iou低的作为负样本
+                        if predict_iou_one >  predict_iou_two: # 框1为正样本  框2为负样本
+                            predict_box = predict_box_one
+                            iou = predict_iou_one
+                            no_predict_box = predict_box_two
+                        else:
+                            predict_box = predict_box_two
+                            iou = predict_iou_two
+                            no_predict_box = predict_box_one
+                        # 正样本：
+                        # 定位
+                        loss = loss + self.l_coord * (torch.pow((ground_box[0] - predict_box[0]), 2) + torch.pow((ground_box[1] - predict_box[1]), 2) + torch.pow(torch.sqrt(ground_box[2] + 1e-8) - torch.sqrt(predict_box[2] + 1e-8), 2) + torch.pow(torch.sqrt(ground_box[3] + 1e-8) - torch.sqrt(predict_box[3] + 1e-8), 2))
+                        loss_coord += self.l_coord * (math.pow((ground_box[0] - predict_box[0].item()), 2) + math.pow((ground_box[1] - predict_box[1].item()), 2) + math.pow(math.sqrt(ground_box[2] + 1e-8) - math.sqrt(predict_box[2].item() + 1e-8),2) + math.pow(math.sqrt(ground_box[3] + 1e-8) - math.sqrt(predict_box[3].item() + 1e-8), 2))
+                        # 置信度
+                        loss = loss + torch.pow(predict_box[4] - iou, 2)
+                        loss_confidence += math.pow(predict_box[4].item() - iou, 2)
+                        iou_sum = iou_sum + iou
+                        # 分类
+                        ground_class = ground_box[10:]
+                        predict_class = bounding_box [self.B * 5:]
+                        loss = loss + mseLoss(ground_class, predict_class)
+                        loss_classes += mseLoss(ground_class, predict_class).item()
+                        # 负样本 置信度：
+                        loss = loss + self.l_noobj * torch.pow(no_predict_box[4] - 0, 2)
+                        loss_confidence += math.pow(no_predict_box[4].item() - 0, 2)
+        return loss, loss_coord, loss_confidence, loss_classes, iou_sum, object_num
+
+    def setWeight(self, epoch):
+        if epoch > self.epcoh_threshold:
+            self.l_coord = 1
+            self.l_noobj = 1
+
+
+'''
+        for batch in range(len(bounding_boxes)):
+            for indexRow in range(self.S):  # 先行 - Y
+                for indexCol in range(self.S):  # 后列 - X
                     # 取bounding box中置信度更大的框 另一个框认为是无效框 不参与loss计算
                     if bounding_boxes[batch][indexRow][indexCol][4] < bounding_boxes[batch][indexRow][indexCol][9]:
                         predict_box = bounding_boxes[batch][indexRow][indexCol][5:]
@@ -89,9 +138,4 @@ class Yolov1_Loss(nn.Module):
                         loss = loss + mseLoss(ground_class,predict_class)
                         loss_classes += mseLoss(ground_class,predict_class).item()
         #print("坐标误差:{} 置信度误差:{} 类别损失:{} iou_sum:{} object_num:{} iou:{}".format(loss_coord, loss_confidence, loss_classes, iou_sum, object_num, "nan" if object_num == 0 else (iou_sum / object_num)))
-        return loss, loss_coord, loss_confidence, loss_classes, iou_sum, object_num
-
-    def setWeight(self, epoch):
-        if epoch > self.epcoh_threshold:
-            self.l_coord = 1
-            self.l_noobj = 1
+'''

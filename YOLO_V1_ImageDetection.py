@@ -4,8 +4,9 @@ YoloV1 = YOLO_V1().cuda()
 
 #------step:2 读取权重文件------
 import torch
-weight_file_name = "YOLO_V1_1900.pth"
-YoloV1.load_state_dict(torch.load(weight_file_name))
+weight_file_name = "./Model_Train/YOLO_V1_500.pth"
+YoloV1.load_state_dict(torch.load(weight_file_name)["model"])
+YoloV1.eval()
 
 #------step:3 类别索引与类别名的映射------
 class_file_name = "./VOC2007/Train/class.data"
@@ -29,7 +30,7 @@ def iou(box_one, box_two):
     return (RX - LX) * (RY - LY) / ((box_one[2]-box_one[0]) * (box_one[3] - box_one[1]) + (box_two[2]-box_two[0]) * (box_two[3] - box_two[1]))
 
 import numpy as np
-def NMS(bounding_boxes,S=7,B=2,img_size=448,confidence_threshold=0.9,iou_threshold=0.3):
+def NMS(bounding_boxes,S=7,B=2,img_size=448,confidence_threshold=0.1,iou_threshold=0.3):
     bounding_boxes = bounding_boxes.cpu().detach().numpy().tolist()
     predict_boxes = []
     nms_boxes = []
@@ -75,12 +76,10 @@ def NMS(bounding_boxes,S=7,B=2,img_size=448,confidence_threshold=0.9,iou_thresho
 
         return nms_boxes
 
-
-
 #------step:5 待测试的文件
 import cv2
 import torchvision.transforms as transforms
-img_file_name = "./VOC2007/Train/JPEGImages/000023.jpg"
+img_file_name = "./VOC2007/Train/JPEGImages/000020.jpg"
 transform = transforms.Compose([
     transforms.ToTensor(), # height * width * channel -> channel * height * width
     transforms.Normalize(mean=(0.5,0.5,0.5),std=(0.5,0.5,0.5))
@@ -89,14 +88,15 @@ img_data = cv2.imread(img_file_name)
 img_data = cv2.resize(img_data,(448,448),interpolation=cv2.INTER_AREA)
 train_data = transform(img_data).cuda()
 train_data = train_data.unsqueeze(0)
-bounding_boxes = YoloV1(train_data)
+with torch.no_grad():
+    bounding_boxes = YoloV1(train_data)
 NMS_boxes = NMS(bounding_boxes)
 
 for box in NMS_boxes:
     print(box)
     img_data = cv2.rectangle(img_data, (box[0],box[1]),(box[2],box[3]),(0,255,0),1)
     img_data = cv2.putText(img_data, "class:{} confidence:{}".format(class_index_Name[box[5]],box[4]),(box[0],box[1]),cv2.FONT_HERSHEY_PLAIN,0.5,(0,0,255),1)
-
+    print("class_name:{}".format(class_index_Name[box[5]]))
 cv2.imshow("img_detection",img_data)
 cv2.waitKey()
 cv2.destroyAllWindows()
