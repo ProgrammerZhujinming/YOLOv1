@@ -1,12 +1,12 @@
 #------step1: 导入网络------
 from YOLO_V1_Model import YOLO_V1
-YoloV1 = YOLO_V1().cuda()
+YOLO = YOLO_V1().cuda()
 
 #------step:2 读取权重文件------
 import torch
 weight_file_name = "./Model_Train/YOLO_V1_500.pth"
-YoloV1.load_state_dict(torch.load(weight_file_name)["model"])
-YoloV1.eval()
+YOLO.load_state_dict(torch.load(weight_file_name)["model"])
+YOLO.eval()
 
 #------step:3 类别索引与类别名的映射------
 class_file_name = "./VOC2007/Train/class.data"
@@ -89,7 +89,7 @@ img_data = cv2.resize(img_data,(448,448),interpolation=cv2.INTER_AREA)
 train_data = transform(img_data).cuda()
 train_data = train_data.unsqueeze(0)
 with torch.no_grad():
-    bounding_boxes = YoloV1(train_data)
+    bounding_boxes = YOLO(train_data)
 NMS_boxes = NMS(bounding_boxes)
 
 for box in NMS_boxes:

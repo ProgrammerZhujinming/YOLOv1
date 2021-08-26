@@ -1,9 +1,8 @@
 # 网络加载
-from YOLO_v1_Model import YOLO_V1
-Yolo_V1 = YOLO_V1()
+from YOLO_V1_Model import YOLO_V1
+YOLO = YOLO_V1()
 import torch
-Yolo_V1.load_state_dict(torch.load('./YOLO_V1_300.pth'))
-Yolo_V1 = Yolo_V1
+YOLO.load_state_dict(torch.load('./YOLO_V1_300.pth'))
 # 类别与索引转换
 IndexToClassName = {}
 with open("./VOC2007/Train/class.data","r") as f:
@@ -80,7 +79,8 @@ img_data = cv2.imread(test_dir)
 img_data = cv2.resize(img_data,(448,448),interpolation=cv2.INTER_AREA)
 train_data = transfrom(img_data).float()
 train_data = torch.unsqueeze(train_data, 0)
-bounding_boxes = Yolo_V1(train_data)
+with torch.no_grad():
+    bounding_boxes = YOLO(train_data)
 NMS_boxes = NMS(bounding_boxes)
 
 img_data = cv2.resize(img_data,(448 * 2,448 * 2),interpolation=cv2.INTER_AREA)

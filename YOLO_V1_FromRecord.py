@@ -1,21 +1,19 @@
 #---------------step1:Dataset-------------------
 import torch
-from YOLO_V1_DateSet import YoloV1DataSet
-dataSet = YoloV1DataSet(imgs_dir="./VOC2007/Train/JPEGImages",annotations_dir="./VOC2007/Train/Annotations",ClassesFile="./VOC2007/Train/class.data")
+from YOLO_V1_DataSet import VOCDataSet
+dataSet = VOCDataSet(imgs_dir="./VOC2007/Train/JPEGImages",annotations_dir="./VOC2007/Train/Annotations",ClassesFile="./VOC2007/Train/class.data")
 from torch.utils.data import DataLoader
 
 #---------------step2:Model-------------------
 from YOLO_V1_Model import YOLO_V1
-Yolo = YOLO_V1().cuda(device=0)
+YOLO = YOLO_V1().cuda(device=0)
 weight_file = "./YOLO_V1_100.pth"
 param_dict = torch.load(weight_file)
-print(param_dict)
-Yolo.load_state_dict(param_dict['model'])
-Yolo.train()
+YOLO.load_state_dict(param_dict['model'])
 
 #---------------step3:LossFunction-------------------
-from YOLO_V1_LossFunction import  Yolov1_Loss
-loss_function = Yolov1_Loss().cuda(device=0)
+from YOLO_V1_LossFunction import YOLO_V1_Loss
+loss_function = YOLO_V1_Loss().cuda(device=0)
 
 #---------------step4:Optimizer-------------------
 import torch.optim as optim
@@ -32,7 +30,7 @@ import torch.nn as nn
 def feature_map_visualize(img_data, writer):
     img_data = img_data.unsqueeze(0)
     img_grid = vutils.make_grid(img_data, normalize=True, scale_each=True)
-    for i,m in enumerate(Yolo.modules()):
+    for i,m in enumerate(YOLO.modules()):
         if isinstance(m, nn.Conv2d) or isinstance(m, nn.BatchNorm2d) or \
                 isinstance(m, nn.ReLU) or isinstance(m, nn.MaxPool2d) or isinstance(m, nn.AdaptiveAvgPool2d):
             img_data = m(img_data)
@@ -48,7 +46,6 @@ writer = SummaryWriter(logdir='./log', filename_suffix=' [' + str(epoch) + '~' +
 
 from tqdm import tqdm
 
-print("epoch:{}".format(epoch))
 while epoch <= 200 * dataSet.classNum:
 
     #loss_function.setWeight(epoch)
@@ -56,12 +53,6 @@ while epoch <= 200 * dataSet.classNum:
     train_sum = int(dataSet.__len__() + 0.5)
     train_len = int(train_sum * 0.9)
     val_len = train_sum - train_len
-
-    #dataSet.shuffleData()
-    train_dataSet, val_dataSet = torch.utils.data.random_split(dataSet, [train_len, val_len])
-    train_loader = DataLoader(train_dataSet, batch_size=64, shuffle=True, num_workers=0)
-
-    train_len = train_loader.__len__()
 
     epoch_train_loss = 0
     epoch_val_loss = 0
@@ -76,6 +67,12 @@ while epoch <= 200 * dataSet.classNum:
     epoch_train_loss_classes = 0
     epoch_val_loss_classes = 0
 
+    #dataSet.shuffleData()
+    train_dataSet, val_dataSet = torch.utils.data.random_split(dataSet, [train_len, val_len])
+
+    train_loader = DataLoader(train_dataSet, batch_size=64, shuffle=True, num_workers=0)
+    train_len = train_loader.__len__()
+    YOLO.train()
     with tqdm(total=train_len) as tbar:
 
         for batch_index, batch_train in enumerate(train_loader):
@@ -83,7 +80,7 @@ while epoch <= 200 * dataSet.classNum:
             train_data = batch_train[0].float().cuda(device=0)
             #train_data.requires_grad = True
             label_data = batch_train[1].float().cuda(device=0)
-            loss = loss_function(bounding_boxes=Yolo(train_data),ground_truth=label_data)
+            loss = loss_function(bounding_boxes=YOLO(train_data),ground_truth=label_data)
             batch_loss = loss[0]
             epoch_train_loss_coord = epoch_train_loss_coord + loss[1]
             epoch_train_loss_confidence = epoch_train_loss_confidence + loss[2]
@@ -107,7 +104,7 @@ while epoch <= 200 * dataSet.classNum:
 
     val_loader = DataLoader(val_dataSet, batch_size=64, shuffle=True, num_workers=0)
     val_len = val_loader.__len__()
-
+    YOLO.eval()
     with torch.no_grad():
         with tqdm(total=val_len) as tbar:
 
@@ -116,7 +113,7 @@ while epoch <= 200 * dataSet.classNum:
                 train_data = batch_train[0].float().cuda(device=0)
                 #train_data.requires_grad = True  验证时计算loss 不需要依附上梯度
                 label_data = batch_train[1].float().cuda(device=0)
-                loss = loss_function(bounding_boxes=Yolo(train_data), ground_truth=label_data)
+                loss = loss_function(bounding_boxes=YOLO(train_data), ground_truth=label_data)
                 batch_loss = loss[0]
                 epoch_val_loss_coord = epoch_val_loss_coord + loss[1]
                 epoch_val_loss_confidence = epoch_val_loss_confidence + loss[2]
@@ -144,14 +141,14 @@ while epoch <= 200 * dataSet.classNum:
     '''
     if epoch % 100 == 0:
         state = {}
-        state["model"] = Yolo.state_dict()
+        state["model"] = YOLO.state_dict()
         state["optim"] = optimizer_Adam
         state["epoch"] = epoch
         torch.save(state, './YOLO_V1_' + str(epoch) + '.pth')
         writer.close()
         writer = SummaryWriter(logdir='log',filename_suffix='[' + str(epoch) + '~' + str(epoch + 100)+']')
     print("epoch : {} ; loss : {}".format(epoch,{epoch_train_loss}))
-    for name, layer in Yolo.named_parameters():
+    for name, layer in YOLO.named_parameters():
         writer.add_histogram(name + '_grad', layer.grad.cpu().data.numpy(), epoch)
         writer.add_histogram(name + '_data', layer.cpu().data.numpy(), epoch)
 

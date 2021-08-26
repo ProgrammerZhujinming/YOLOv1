@@ -79,8 +79,8 @@ class YOLO_V1(nn.Module):
         self.Fc = nn.Sequential(
             nn.Dropout(0.5),
             nn.Linear(7*7*1024,4096),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.5),
+            nn.LeakyReLU(inplace=True),
+            #nn.Dropout(0.5),
             nn.Linear(4096,7 * 7 * (B*5 + Classes_Num)),
             nn.Sigmoid()
         )

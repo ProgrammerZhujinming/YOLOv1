@@ -1,4 +1,5 @@
 import os
+
 files_dir = "./VOC2007/Train/ImageSets/Main"
 files_name = os.listdir(files_dir)
 

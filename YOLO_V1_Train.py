@@ -1,23 +1,22 @@
 #---------------step1:Dataset-------------------
 import torch
-from YOLO_V1_DateSet import YoloV1DataSet
-dataSet = YoloV1DataSet(imgs_dir="./VOC2007/Train/JPEGImages",annotations_dir="./VOC2007/Train/Annotations",ClassesFile="./VOC2007/Train/class.data")
+from YOLO_V1_DataSet import VOCDataSet
+dataSet = VOCDataSet(imgs_dir="./VOC2007/Train/JPEGImages",annotations_dir="./VOC2007/Train/Annotations",ClassesFile="./VOC2007/Train/class.data")
 from torch.utils.data import DataLoader
 #dataLoader = DataLoader(dataSet,batch_size=64,shuffle=True,num_workers=0)
 
 #---------------step2:Model-------------------
 from YOLO_V1_Model import YOLO_V1
-Yolo = YOLO_V1().cuda(device=0)
-Yolo.initialize_weights()
-Yolo.train()
+YOLO = YOLO_V1().cuda(device=0)
+YOLO.initialize_weights()
 
 #---------------step3:LossFunction-------------------
-from YOLO_V1_LossFunction import  Yolov1_Loss
-loss_function = Yolov1_Loss().cuda(device=0)
+from YOLO_V1_LossFunction import  YOLO_V1_Loss
+loss_function = YOLO_V1_Loss().cuda(device=0)
 
 #---------------step4:Optimizer-------------------
 import torch.optim as optim
-optimizer_Adam = optim.Adam(Yolo.parameters(),lr=1e-4,weight_decay=0.0005)
+optimizer_Adam = optim.Adam(YOLO.parameters(),lr=1e-4,weight_decay=0.0005)
 #使用余弦退火动态调整学习率
 #lr_reduce_scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer_Adam , T_max=20, eta_min=1e-4, last_epoch=-1)
 #lr_reduce_scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer=optimizer_Adam, T_0=2, T_mult=2)
@@ -29,7 +28,7 @@ import torch.nn as nn
 def feature_map_visualize(img_data, writer):
     img_data = img_data.unsqueeze(0)
     img_grid = vutils.make_grid(img_data, normalize=True, scale_each=True)
-    for i,m in enumerate(Yolo.modules()):
+    for i,m in enumerate(YOLO.modules()):
         if isinstance(m, nn.Conv2d) or isinstance(m, nn.BatchNorm2d) or \
                 isinstance(m, nn.ReLU) or isinstance(m, nn.MaxPool2d) or isinstance(m, nn.AdaptiveAvgPool2d):
             img_data = m(img_data)
@@ -54,13 +53,6 @@ while epoch <= 200 * dataSet.classNum:
     train_len = int(train_sum * 0.9)
     val_len = train_sum - train_len
 
-    #dataSet.shuffleData()
-    train_dataSet, val_dataSet = torch.utils.data.random_split(dataSet, [train_len, val_len])
-    train_loader = DataLoader(train_dataSet, batch_size=64, shuffle=True, num_workers=0)
-    val_loader = DataLoader(val_dataSet, batch_size=64, shuffle=True, num_workers=0)
-
-    train_len = train_loader.__len__()
-    val_len = val_loader.__len__()
     epoch_train_loss = 0
     epoch_val_loss = 0
     epoch_train_iou = 0
@@ -74,6 +66,12 @@ while epoch <= 200 * dataSet.classNum:
     epoch_train_loss_classes = 0
     epoch_val_loss_classes = 0
 
+    #dataSet.shuffleData()
+    train_dataSet, val_dataSet = torch.utils.data.random_split(dataSet, [train_len, val_len])
+
+    train_loader = DataLoader(train_dataSet, batch_size=64, shuffle=True, num_workers=0)
+    train_len = train_loader.__len__()
+    YOLO.train()
     with tqdm(total=train_len) as tbar:
 
         for batch_index, batch_train in enumerate(train_loader):
@@ -81,7 +79,7 @@ while epoch <= 200 * dataSet.classNum:
             train_data = batch_train[0].float().cuda(device=0)
             train_data.requires_grad = True
             label_data = batch_train[1].float().cuda(device=0)
-            loss = loss_function(bounding_boxes=Yolo(train_data),ground_truth=label_data)
+            loss = loss_function(bounding_boxes=YOLO(train_data),ground_truth=label_data)
             batch_loss = loss[0]
             epoch_train_loss_coord = epoch_train_loss_coord + loss[1]
             epoch_train_loss_confidence = epoch_train_loss_confidence + loss[2]
@@ -103,24 +101,27 @@ while epoch <= 200 * dataSet.classNum:
 
     #lr_reduce_scheduler.step()
 
+    val_loader = DataLoader(val_dataSet, batch_size=64, shuffle=True, num_workers=0)
+    val_len = val_loader.__len__()
+    YOLO.eval()
     with tqdm(total=val_len) as tbar:
-
-        for batch_index, batch_train in enumerate(val_loader):
-            #optimizer.zero_grad()
-            train_data = batch_train[0].float().cuda(device=0)
-            #train_data.requires_grad = True  验证时计算loss 不需要依附上梯度
-            label_data = batch_train[1].float().cuda(device=0)
-            loss = loss_function(bounding_boxes=Yolo(train_data), ground_truth=label_data)
-            batch_loss = loss[0]
-            epoch_val_loss_coord = epoch_val_loss_coord + loss[1]
-            epoch_val_loss_confidence = epoch_val_loss_confidence + loss[2]
-            epoch_val_loss_classes = epoch_val_loss_classes + loss[3]
-            epoch_val_iou = epoch_val_iou + loss[4]
-            epoch_val_object_num = epoch_val_object_num + loss[5]
-            #batch_loss.backward()
-            #optimizer.step()
-            batch_loss = batch_loss.item()
-            epoch_val_loss = epoch_val_loss + batch_loss
+        with torch.no_grad():
+            for batch_index, batch_train in enumerate(val_loader):
+                #optimizer.zero_grad()
+                train_data = batch_train[0].float().cuda(device=0)
+                #train_data.requires_grad = True  验证时计算loss 不需要依附上梯度
+                label_data = batch_train[1].float().cuda(device=0)
+                loss = loss_function(bounding_boxes=Yolo(train_data), ground_truth=label_data)
+                batch_loss = loss[0]
+                epoch_val_loss_coord = epoch_val_loss_coord + loss[1]
+                epoch_val_loss_confidence = epoch_val_loss_confidence + loss[2]
+                epoch_val_loss_classes = epoch_val_loss_classes + loss[3]
+                epoch_val_iou = epoch_val_iou + loss[4]
+                epoch_val_object_num = epoch_val_object_num + loss[5]
+                #batch_loss.backward()
+                #optimizer.step()
+                batch_loss = batch_loss.item()
+                epoch_val_loss = epoch_val_loss + batch_loss
 
             tbar.set_description("val: coord_loss:{} confidence_loss:{} class_loss:{} iou:{}".format(round(loss[1], 4), round(loss[2], 4), round(loss[3], 4), round(loss[4] / loss[5], 4)), refresh=True)
             tbar.update(1)
@@ -139,7 +140,7 @@ while epoch <= 200 * dataSet.classNum:
     '''
     if epoch % 100 == 0:
         dict = {}
-        dict['model'] = Yolo.state_dict()
+        dict['model'] = YOLO.state_dict()
         dict['optim'] = optimizer_Adam
         dict['epoch'] = epoch
         torch.save(dict, './YOLO_V1_' + str(epoch) + '.pth')

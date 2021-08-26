@@ -1,9 +1,9 @@
 # ---------------step1:Dataset 数据集-------------------
 import torch
-from YOLO_V1_DataSet import YoloV1DataSet
+from YOLO_V1_DataSet import VOCDataSet
 from torch.utils.data import DataLoader
 
-dataSet = YoloV1DataSet(imgs_dir="./VOC2007/Test/JPEGImages", annotations_dir="./VOC2007/Test/Annotations", ClassesFile="./VOC2007/Train/class.data")
+dataSet = VOCDataSet(imgs_dir="./VOC2007/Test/JPEGImages", annotations_dir="./VOC2007/Test/Annotations", ClassesFile="./VOC2007/Train/class.data")
 dataLoader = DataLoader(dataSet, batch_size=32, num_workers=4)
 
 # ---------------step2:Model 模型-------------------
@@ -11,7 +11,7 @@ from YOLO_V1_Model import YOLO_V1
 
 YOLO = YOLO_V1()
 YOLO.load_state_dict(torch.load('./YOLO_V1_5900.pth'))
-Yolo = YOLO.cuda(device=0)
+YOLO = YOLO.cuda(device=0)
 
 # ---------------step3:class_data 与类别相关的数据--------------
 #类别索引转类别名
@@ -164,7 +164,7 @@ with torch.no_grad():
         for batch_index, batch_train in enumerate(dataLoader):
             batch_train_data = batch_train[0].float().cuda(device=0)
             batch_ground_boxes = batch_train[1].float().cuda(device=0)
-            batch_bounding_boxes = Yolo(batch_train_data)  # batch_size * 7 * 7 * (2 * 5 + 20)
+            batch_bounding_boxes = YOLO(batch_train_data)  # batch_size * 7 * 7 * (2 * 5 + 20)
 
             batch_bounding_boxes = batch_bounding_boxes.cpu().detach().numpy()
             batch_ground_boxes = batch_ground_boxes.cpu().detach().numpy()
